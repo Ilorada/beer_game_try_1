@@ -1,5 +1,7 @@
 # 🍺 Beer Game — l'effet coup de fouet
 
+> Ce dépôt contient aussi **[Quiz Supply Chain](quiz-app/README.md)** (dossier `quiz-app/`), une application qui génère des milliers de QCM à partir de tes cours pour préparer un examen de 80 questions en 3 h.
+
 Une version multijoueur en ligne du **Beer Distribution Game** (créé au MIT Sloan dans les
 années 1960), le classique de la gestion des opérations pour démontrer l'**effet coup de
 fouet** (*bullwhip effect*) : comment de petites variations de la demande client s'amplifient

@@ -1,0 +1,21 @@
+{
+  "name": "quiz-supply-chain",
+  "version": "1.0.0",
+  "description": "Génère des milliers de QCM de supply chain à partir de tes cours et entraîne-toi en conditions d examen.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "express": "^5.3.0",
+    "mammoth": "^1.13.0",
+    "multer": "^2.5.0",
+    "pdf-parse": "^2.4.5",
+    "zod": "^4.6.7"
+  },
+  "type": "module"
+}

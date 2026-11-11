@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz Supply Chain – préparation à l'examen</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">📦 Quiz Supply Chain</div>
+    <nav id="nav">
+      <button data-view="home" class="active">Accueil</button>
+      <button data-view="sources">Mes supports</button>
+      <button data-view="generate">Générer</button>
+      <button data-view="practice">S'entraîner</button>
+      <button data-view="exam">Examen blanc</button>
+      <button data-view="bank">Banque</button>
+      <button data-view="history">Historique</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Accueil -->
+    <section id="view-home" class="view active">
+      <h1>Prépare ton examen de supply chain</h1>
+      <p class="lead">Importe tes cours et tes anciens quiz, génère des milliers de QCM, puis entraîne-toi dans les conditions réelles : <strong>80 questions en 3 heures</strong>.</p>
+      <div class="cards" id="home-stats"></div>
+      <div id="ai-warning" class="notice hidden">
+        La génération par IA est désactivée : ajoute ta clé <code>ANTHROPIC_API_KEY</code> dans le fichier <code>quiz-app/.env</code> puis relance le serveur.
+        En attendant, les quiz déjà présents dans tes supports sont importés automatiquement.
+      </div>
+      <h2>Comment ça marche</h2>
+      <ol class="steps">
+        <li><strong>Mes supports</strong> : dépose tes PDF, Word ou fichiers texte (cours, fiches, anciens quiz).</li>
+        <li><strong>Générer</strong> : choisis le nombre de questions (jusqu'à 10 000 par lancement).</li>
+        <li><strong>S'entraîner</strong> : séries par thème avec la correction immédiate.</li>
+        <li><strong>Examen blanc</strong> : 80 questions, chronomètre de 3 h, note finale et correction détaillée.</li>
+        <li><strong>Révision</strong> : retravaille uniquement les questions où tu t'es trompé.</li>
+      </ol>
+      <h2>Mes points faibles</h2>
+      <div id="home-topics"></div>
+    </section>
+
+    <!-- Supports -->
+    <section id="view-sources" class="view">
+      <h1>Mes supports</h1>
+      <form id="upload-form" class="panel">
+        <label class="drop" id="drop">
+          <input type="file" id="files" name="files" multiple accept=".pdf,.docx,.txt,.md,.csv,.json" />
+          <span>📄 Clique ou dépose tes fichiers ici<br /><small>PDF, Word (.docx), TXT, Markdown, CSV, JSON</small></span>
+        </label>
+        <details>
+          <summary>… ou coller du texte</summary>
+          <input type="text" name="name" placeholder="Nom du support (ex. Chapitre 3 – Gestion des stocks)" />
+          <textarea name="text" rows="8" placeholder="Colle ici un cours ou un quiz"></textarea>
+        </details>
+        <button type="submit" class="primary">Importer</button>
+        <div id="upload-result"></div>
+      </form>
+      <p class="hint">Les quiz déjà présents dans un support (questions numérotées, propositions A/B/C/D, ligne « Réponse : B ») sont ajoutés directement à la banque.</p>
+      <table class="table" id="sources-table"></table>
+    </section>
+
+    <!-- Génération -->
+    <section id="view-generate" class="view">
+      <h1>Générer des questions</h1>
+      <form id="gen-form" class="panel">
+        <fieldset>
+          <legend>Supports à utiliser</legend>
+          <div id="gen-sources" class="checks"></div>
+        </fieldset>
+        <div class="row">
+          <label>Nombre de questions
+            <input type="number" name="target" value="200" min="1" max="10000" step="1" />
+          </label>
+          <label>Modèle
+            <select name="model" id="gen-model"></select>
+          </label>
+        </div>
+        <label>Consigne facultative
+          <input type="text" name="focus" placeholder="ex. insister sur les calculs de stock de sécurité et l'EOQ" />
+        </label>
+        <button class="primary" type="submit">Lancer la génération</button>
+        <p class="hint">Les questions sont générées par lots de 25 et ajoutées à la banque au fur et à mesure : tu peux commencer à t'entraîner pendant ce temps. Les doublons sont écartés automatiquement.</p>
+      </form>
+      <h2>Générations</h2>
+      <div id="jobs"></div>
+    </section>
+
+    <!-- Entraînement -->
+    <section id="view-practice" class="view">
+      <h1>S'entraîner</h1>
+      <form id="practice-form" class="panel">
+        <div class="row">
+          <label>Mode
+            <select name="mode">
+              <option value="practice">Entraînement (correction immédiate)</option>
+              <option value="review">Révision de mes erreurs</option>
+            </select>
+          </label>
+          <label>Nombre de questions
+            <input type="number" name="count" value="20" min="1" max="500" />
+          </label>
+        </div>
+        <fieldset>
+          <legend>Thèmes (aucun coché = tous)</legend>
+          <div id="practice-topics" class="checks"></div>
+        </fieldset>
+        <button class="primary" type="submit">Commencer</button>
+      </form>
+    </section>
+
+    <!-- Examen -->
+    <section id="view-exam" class="view">
+      <h1>Examen blanc</h1>
+      <form id="exam-form" class="panel">
+        <p>Conditions réelles : questions tirées au hasard dans toute la banque, réparties selon les thèmes, sans correction avant la fin.</p>
+        <div class="row">
+          <label>Questions <input type="number" name="count" value="80" min="1" max="500" /></label>
+          <label>Durée (minutes) <input type="number" name="durationMin" value="180" min="1" max="600" /></label>
+        </div>
+        <p class="hint">À 80 questions en 180 minutes, tu disposes de 2 min 15 s par question.</p>
+        <button class="primary" type="submit">Démarrer l'examen</button>
+      </form>
+    </section>
+
+    <!-- Lecteur de quiz (partagé) -->
+    <section id="view-quiz" class="view">
+      <div class="quiz-bar">
+        <span id="quiz-progress"></span>
+        <span id="quiz-timer" class="timer hidden"></span>
+        <button id="quiz-quit" class="ghost">Terminer</button>
+      </div>
+      <div class="progress"><div id="quiz-progress-bar"></div></div>
+      <div id="quiz-grid" class="grid hidden"></div>
+      <article class="question-card">
+        <div class="meta" id="q-meta"></div>
+        <h2 id="q-text"></h2>
+        <div id="q-choices" class="choices"></div>
+        <div id="q-feedback" class="feedback hidden"></div>
+      </article>
+      <div class="quiz-nav">
+        <button id="q-prev" class="ghost">← Précédente</button>
+        <label class="flag"><input type="checkbox" id="q-flag" /> À revoir</label>
+        <button id="q-next" class="primary">Suivante →</button>
+      </div>
+    </section>
+
+    <!-- Résultats -->
+    <section id="view-result" class="view">
+      <div id="result"></div>
+    </section>
+
+    <!-- Banque -->
+    <section id="view-bank" class="view">
+      <h1>Banque de questions</h1>
+      <div class="row toolbar">
+        <input type="search" id="bank-search" placeholder="Rechercher…" />
+        <select id="bank-topic"><option value="">Tous les thèmes</option></select>
+        <select id="bank-filter"><option value="">Toutes</option><option value="wrong">Mes erreurs</option></select>
+        <a class="button ghost" href="/api/export">Exporter (JSON)</a>
+        <label class="button ghost">Importer (JSON)<input type="file" id="bank-import" accept=".json" hidden /></label>
+      </div>
+      <p id="bank-count" class="hint"></p>
+      <div id="bank-list"></div>
+      <button id="bank-more" class="ghost hidden">Afficher plus</button>
+    </section>
+
+    <!-- Historique -->
+    <section id="view-history" class="view">
+      <h1>Historique</h1>
+      <div id="history"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
