@@ -291,6 +291,9 @@ button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; backgroun
 .tq > div { display: flex; flex-direction: column; gap: 4px; }
 .tq .lang { font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 @media (max-width: 720px) { .tq { grid-template-columns: 1fr; } }
+.ref { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; color: var(--muted); background: var(--teal-soft); border-radius: 12px; padding: 8px 12px; }
+.ref svg { flex: none; margin-top: 3px; color: var(--teal-deep); }
+.ref strong { color: var(--ink); }
 .ask { display: flex; flex-direction: column; gap: 8px; border-top: 2px dashed var(--line); padding-top: 12px; }
 .ask .ask-title { font: 600 16px var(--font-display); color: var(--violet); display: flex; align-items: center; gap: 6px; }
 .ask form { display: flex; gap: 8px; }
@@ -449,10 +452,10 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <label class="drop" id="drop" for="file-input">
         <svg><use href="#i-upload"/></svg>
         <strong>Clique ici ou dépose tes fichiers</strong>
-        <span>PDF, Word (.docx) ou texte (.txt, .md, .csv)</span>
+        <span>PDF, Word (.docx), texte, ou photos de pages (JPEG, PNG)</span>
         <span id="drop-files"></span>
       </label>
-      <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md,.csv,.json" class="hidden">
+      <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,image/jpeg,image/png,image/webp" class="hidden">
       <details>
         <summary>Ou colle du texte</summary>
         <div class="stack" style="margin-top:10px">
@@ -749,7 +752,7 @@ async function addQuestions(list, sourceId, origin) {
       id: rid(), question: String(q.question).trim(), choices, answer,
       explanation: String(q.explanation || "").trim(), topic: String(q.topic || "Général").trim().slice(0, 60) || "Général",
       difficulty: ["facile", "moyen", "difficile"].includes(q.difficulty) ? q.difficulty : "moyen",
-      origin, guessed: !!q.answerGuessed, altered: !!q.altered,
+      origin, guessed: !!q.answerGuessed, altered: !!q.altered, ref: q.ref || null,
     });
   }
   for (let i = 0; i < clean.length; i += 150) {
@@ -904,7 +907,7 @@ async function readFile(file, onProgress) {
         line += it.str + (it.hasEOL ? "\n" : "");
         lastY = y;
       }
-      pages.push((out + line).replace(/\n{3,}/g, "\n\n").trim());
+      pages.push(`[[Page ${i}]]\n` + (out + line).replace(/\n{3,}/g, "\n\n").trim());
       if (i % 10 === 0) onProgress?.(`page ${i} / ${pdf.numPages}`);
     }
     return pages.join("\n\n");
@@ -918,12 +921,19 @@ async function readFile(file, onProgress) {
   throw new Error("format non pris en charge (utilise PDF, Word .docx ou texte)");
 }
 
+// Repères « [[Page N]] » insérés dans le texte : chaque morceau commence par la page en cours.
+const PAGE_RE = /\[\[Page (\d+)\]\]/g;
 function chunkText(text, size = 12000) {
   const paragraphs = text.replace(/\r/g, "").split(/\n{2,}/);
   const chunks = [];
-  let cur = "";
+  let cur = "", lastPage = null;
   for (const p of paragraphs) {
-    if (cur && cur.length + p.length > size) { chunks.push(cur); cur = ""; }
+    if (cur && cur.length + p.length > size) {
+      chunks.push(cur);
+      const marks = [...cur.matchAll(PAGE_RE)];
+      if (marks.length) lastPage = marks[marks.length - 1][1];
+      cur = lastPage && !p.startsWith("[[Page") ? `[[Page ${lastPage}]]` : "";
+    }
     if (p.length > size) for (let i = 0; i < p.length; i += size) chunks.push(p.slice(i, i + size));
     else cur += (cur ? "\n\n" : "") + p;
   }
@@ -935,7 +945,7 @@ function chunkText(text, size = 12000) {
 // Lecture des quiz déjà rédigés (sans IA) : « 1. … / A) … / Réponse : B ».
 // ======================================================================
 const QUESTION_RE = /^\s*(?:(?:q(?:uestion)?\s*)?(\d{1,4})\s*[).:\-–]|q(?:uestion)?\s*(\d{1,4})?\s*[:\-–])\s*(.*)$/i;
-const CHOICE_RE = /^\s*(\*|\(x\)|\[x\]|✓|✔)?\s*[([]?([a-hA-H])[).\]:]\s+(.*?)\s*(\*|\(x\)|\[x\]|✓|✔)?\s*$/;
+const CHOICE_RE = /^\s*(\*|\(x\)|\[x\]|✓|✔)?\s*[([]?([a-hA-H])[).\]:]\s+(.*?)\s*(\*|\(x\)|\[x\]|✓|✔|\(coch[ée]e\))?\s*$/i;
 const ANSWER_RE = /^\s*(?:bonnes?\s+r[ée]ponses?|r[ée]ponses?(?:\s+correcte)?|corrig[ée]|solution|answer|correct(?:\s+answer)?)\s*[:\-–=]\s*\(?([a-hA-H])\b\)?(.*)$/i;
 const EXPLAIN_RE = /^\s*(?:explications?|justification|commentaire|explanation)\s*[:\-–]\s*(.*)$/i;
 const TOPIC_RE = /^\s*(?:th[èe]me|chapitre|topic|section)\s*[:\-–]\s*(.*)$/i;
@@ -944,16 +954,18 @@ const letterIndex = (l) => l.toUpperCase().charCodeAt(0) - 65;
 function parseQuizText(text, defaultTopic = "Général") {
   const lines = text.replace(/\r/g, "").split("\n");
   const out = [];
-  let topic = defaultTopic, cur = null, last = null;
+  let topic = defaultTopic, cur = null, last = null, page = null;
   const finish = () => {
     if (cur && cur.answer === null && cur.marked !== undefined) cur.answer = cur.marked;
     if (cur && cur.choices.length >= 2 && cur.answer !== null && cur.answer < cur.choices.length)
-      out.push({ question: cur.question.trim(), choices: cur.choices, answer: cur.answer, explanation: cur.explanation.trim(), topic: cur.topic });
+      out.push({ question: cur.question.trim(), choices: cur.choices, answer: cur.answer, explanation: cur.explanation.trim(), topic: cur.topic, ref: cur.page ? { page: Number(cur.page) } : null });
     cur = null; last = null;
   };
   for (const raw of lines) {
     const line = raw.trimEnd();
     if (!line.trim()) continue;
+    const pm = line.trim().match(/^\[\[Page (\d+)\]\]$/);
+    if (pm) { page = pm[1]; continue; }
     const t = line.match(TOPIC_RE);
     if (t && (!cur || cur.answer !== null)) { finish(); topic = t[1].trim() || defaultTopic; continue; }
     const a = line.match(ANSWER_RE);
@@ -967,7 +979,7 @@ function parseQuizText(text, defaultTopic = "Général") {
       last = "c"; continue;
     }
     const q = line.match(QUESTION_RE);
-    if (q && q[3].trim()) { finish(); cur = { question: q[3].trim(), choices: [], answer: null, explanation: "", topic }; last = "q"; continue; }
+    if (q && q[3].trim()) { finish(); cur = { question: q[3].trim(), choices: [], answer: null, explanation: "", topic, page }; last = "q"; continue; }
     if (cur) {
       if (last === "q" && !cur.choices.length) cur.question += " " + line.trim();
       else if (last === "c") cur.choices[cur.choices.length - 1] += " " + line.trim();
@@ -995,7 +1007,23 @@ const ANGLES = [
   "application à un secteur concret (grande distribution, industrie, e-commerce, santé, agroalimentaire)",
 ];
 
-const JSON_SHAPE = `{"questions":[{"question":"…","choices":["…","…","…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"facile|moyen|difficile"}]}`;
+const JSON_SHAPE = `{"questions":[{"question":"…","choices":["…","…","…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"facile|moyen|difficile","page":12,"quote":"…"}]}`;
+const REF_RULE = "- Le passage contient des repères « [[Page N]] ». Pour chaque question, mets dans « page » le numéro N du repère qui précède l'information utilisée (null s'il n'y a aucun repère), et dans « quote » une courte citation EXACTE du passage (10 à 25 mots, copiée mot pour mot, sans le repère) qui justifie la bonne réponse.";
+/** Garde la page et la citation seulement si elles existent vraiment dans le passage. */
+function checkRef(q, chunk) {
+  const pages = [...chunk.matchAll(PAGE_RE)].map((m) => Number(m[1]));
+  let page = Number(q.page);
+  const quote = String(q.quote || "").replace(/\[\[Page \d+\]\]/g, "").trim();
+  const quoteOk = quote.length > 8 && loose(chunk).includes(loose(quote));
+  if (quoteOk) {
+    // La page qui précède réellement la citation dans le passage.
+    const words = quote.split(/\s+/).slice(0, 4).join(" ");
+    const at = chunk.indexOf(words);
+    if (at >= 0) { const before = [...chunk.slice(0, at).matchAll(PAGE_RE)]; if (before.length) page = Number(before[before.length - 1][1]); }
+  }
+  if (!pages.includes(page)) page = pages.length === 1 ? pages[0] : null;
+  return page || quoteOk ? { page: page || null, quote: quoteOk ? quote : "" } : null;
+}
 
 function topicsHint() {
   const t = [...new Set(S.questions.map((q) => q.topic))].slice(0, 40);
@@ -1037,6 +1065,7 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
     "- l'explication (2 à 4 phrases) dit pourquoi la bonne réponse est juste et pourquoi les autres sont fausses ;",
     "- environ 30 % de questions faciles, 50 % moyennes, 20 % difficiles ;",
     "- reste fidèle au passage ; tu peux compléter avec des connaissances classiques de supply chain cohérentes avec lui ;",
+    REF_RULE,
     SCOPE_RULE,
     examples,
     topicsHint(),
@@ -1056,8 +1085,9 @@ function extractionPrompt(chunk, sourceName) {
     "- Sinon, trouve la bonne réponse avec tes connaissances de supply chain, mets \"answerGuessed\": true et explique ton raisonnement.",
     "- Une question sans propositions (question ouverte) n'est pas un QCM : ne l'inclus pas et compte-la dans « openSkipped ».",
     "- Écris une courte explication pour chaque question, en français (c'est le seul texte que tu rédiges toi-même).",
+    "- Le texte contient des repères « [[Page N]] » : mets dans « page » le numéro du repère qui précède la question (null s'il n'y en a pas).",
     topicsHint(),
-    `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false}],"openSkipped":0}`,
+    `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false,"page":1}],"openSkipped":0}`,
     'Si l\'extrait ne contient aucune question, réponds {"questions":[],"openSkipped":0}.',
     `\n=== QUIZ : « ${sourceName} » ===\n${chunk}\n=== FIN ===`,
   ].join("\n");
@@ -1294,6 +1324,50 @@ $("#lex-list").addEventListener("click", (e) => {
   delete S.dict[k];
   saveDict();
   renderLexicon();
+});
+
+// ======================================================================
+// Source d'une question : document, page, citation
+// ======================================================================
+function refHTML(q) {
+  const src = S.sources.find((x) => x.id === q.sourceId);
+  if (!src) return "";
+  const where = q.ref?.page ? `${src.media === "photos" ? "photo" : "page"} ${q.ref.page}` : "";
+  return `<div class="ref"><svg width="16" height="16"><use href="#i-book"/></svg><span><strong>Source :</strong> ${src.kind === "quiz" ? "quiz" : "cours"} « ${esc(src.name)} »${where ? `, <strong>${where}</strong>` : ""}${q.ref?.quote ? `<br><em>« ${esc(q.ref.quote)} »</em>` : ""}${!q.ref && SAMPLE ? ` <button type="button" class="link" data-findref="${q.id}">Retrouver la page</button>` : ""}</span></div>`;
+}
+// Pour les questions sans référence : on cherche les passages les plus proches, puis Claude pointe la page.
+async function findRef(q) {
+  const parts = await chunksOf(q.sourceId);
+  if (!parts.length) throw new Error("Le document n'est plus disponible.");
+  const words = new Set(stemKey(q.question + " " + q.choices[q.answer]).split(" ").filter((w) => w.length > 4));
+  const scored = parts.map((c) => ({ c, score: stemKey(c.text).split(" ").filter((w) => words.has(w)).length })).sort((a, b) => b.score - a.score).slice(0, 2).sort((a, b) => a.c.n - b.c.n);
+  const text = scored.map((x) => x.c.text).join("\n\n");
+  const r = await SAMPLE.json([
+    "Voici une question de révision de supply chain et des extraits du document d'où elle vient. Trouve où se trouve l'information qui justifie la bonne réponse.",
+    REF_RULE.replace("Pour chaque question", "Pour cette question"),
+    'Réponds uniquement avec un objet JSON : {"page":12,"quote":"…"} (page null et quote "" si l\'information n\'est pas dans les extraits).',
+    "",
+    `Question : ${q.question}`, `Bonne réponse : ${q.choices[q.answer]}`,
+    `\n=== EXTRAITS ===\n${text.slice(0, 60000)}\n=== FIN ===`,
+  ].join("\n"), { cache: false });
+  const ref = checkRef(r || {}, text);
+  if (!ref) throw new Error("Claude n'a pas trouvé ce passage dans le document.");
+  for (const o of new Set([q, S.batches.get(q.batchId)?.questions.find((x) => x.id === q.id)])) if (o) o.ref = ref;
+  await saveBatchOf(q).catch(() => {});
+  return ref;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-findref]");
+  if (!b) return;
+  const q = S.qById.get(b.dataset.findref);
+  b.disabled = true;
+  b.textContent = "Recherche…";
+  try {
+    await findRef(q);
+    b.closest(".ref").outerHTML = refHTML(q);
+  } catch (err) {
+    b.textContent = err.message || SAMPLE_ERRORS[err.code] || "Introuvable";
+  }
 });
 
 // ======================================================================
@@ -1634,7 +1708,11 @@ $("#upload-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!ROOT) return toast("Tes données ne sont pas accessibles : ouvre la page depuis Claude, connecté à ton compte.", true);
   const kind = document.querySelector('input[name="kind"]:checked').value;
-  const items = pickedFiles.map((f) => ({ name: f.name, file: f }));
+  // Les photos choisies ensemble forment un seul document : une photo = une page.
+  const isImg = (f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
+  const photos = pickedFiles.filter(isImg);
+  const items = pickedFiles.filter((f) => !isImg(f)).map((f) => ({ name: f.name, file: f }));
+  if (photos.length) items.push({ name: $("#paste-name").value.trim() && !$("#paste-text").value.trim() ? $("#paste-name").value.trim() : `Photos du ${new Date().toLocaleDateString("fr-FR")}${photos.length > 1 ? ` (${photos.length} pages)` : ""}`, photos });
   const pasted = $("#paste-text").value.trim();
   if (pasted) items.push({ name: $("#paste-name").value.trim() || "Texte collé", text: pasted });
   if (!items.length) return toast("Choisis au moins un fichier ou colle du texte.", true);
@@ -1643,13 +1721,13 @@ $("#upload-form").addEventListener("submit", async (e) => {
   for (const it of items) {
     try {
       status.textContent = `Lecture de « ${it.name} »…`;
-      const text = it.text ?? (await readFile(it.file, (p) => (status.textContent = `Lecture de « ${it.name} » : ${p}`)));
+      const text = it.photos ? await readPhotos(it.photos, (m) => (status.textContent = m)) : it.text ?? (await readFile(it.file, (p) => (status.textContent = `Lecture de « ${it.name} » : ${p}`)));
       if (!text || text.trim().length < 20) throw new Error("aucun texte trouvé (PDF scanné ?)");
       const sourceId = "s" + rid();
       const chunks = chunkText(text);
       status.textContent = `Enregistrement de « ${it.name} »…`;
       for (let n = 0; n < chunks.length; n++) await write(col("chunks").doc(`${sourceId}-${n}`), "set", { sourceId, n, text: chunks[n] });
-      const src = { name: it.name, kind, chars: text.length, chunkCount: chunks.length, createdAt: Date.now(), themeId: $("#up-theme").value || "" };
+      const src = { name: it.name, kind, media: it.photos ? "photos" : "", chars: text.length, chunkCount: chunks.length, createdAt: Date.now(), themeId: $("#up-theme").value || "" };
       await write(col("sources").doc(sourceId), "set", src);
       S.sources.push({ id: sourceId, ...src });
       const parsed = parseQuizText(text, it.name.replace(/\.[^.]+$/, ""));
@@ -1672,10 +1750,30 @@ $("#upload-form").addEventListener("submit", async (e) => {
   renderSources();
 });
 
+async function readPhotos(files, onStatus) {
+  if (!SAMPLE) throw new Error("Claude n'est pas disponible dans cette vue : les photos ne peuvent pas être lues.");
+  const lim = await SAMPLE.limits().catch(() => null);
+  if (!lim?.images) throw new Error("cette vue ne peut pas envoyer de photos à Claude. Ouvre la page directement depuis son lien claude.ai.");
+  const pages = [];
+  for (let i = 0; i < files.length; i++) {
+    onStatus?.(`Claude lit la photo ${i + 1} sur ${files.length}…`);
+    if (files[i].size > lim.images.maxInputBytes) throw new Error(`la photo ${files[i].name} est trop lourde`);
+    const { text } = await SAMPLE([
+      "Recopie MOT POUR MOT tout le texte visible sur cette photo d'une page de cours ou de quiz de supply chain.",
+      "- Garde la langue d'origine, les titres, la numérotation des questions et les lettres des propositions (A), B)…), une ligne par proposition.",
+      "- Si une proposition est cochée, entourée ou surlignée comme bonne réponse, ajoute « (cochée) » à la fin de sa ligne. Si un corrigé est écrit, recopie-le (« Réponse : B »).",
+      "- Recopie aussi le texte des tableaux et des schémas, ligne par ligne.",
+      "- N'ajoute aucun commentaire. Si la photo ne contient pas de texte lisible, réponds seulement : (illisible).",
+    ].join("\n"), { images: [files[i]], cache: false });
+    pages.push(`[[Page ${i + 1}]]\n${text.trim()}`);
+  }
+  return pages.join("\n\n");
+}
+
 // Une question est « fidèle » si son énoncé et ses propositions se retrouvent dans le texte du quiz.
 const loose = (t) => stemKey(t).replace(/ /g, "");
 function isVerbatim(q, chunk) {
-  const hay = loose(chunk);
+  const hay = loose(chunk.replace(PAGE_RE, " "));
   return [q.question, ...(q.choices || [])].every((t) => hay.includes(loose(t)));
 }
 let lastOpenSkipped = 0;
@@ -1687,7 +1785,7 @@ async function extractQuiz(sourceId, name, chunks, onStatus) {
     onStatus?.(`Claude lit le quiz « ${name} » : partie ${i + 1} / ${chunks.length}`);
     try {
       const data = await SAMPLE.json(extractionPrompt(chunks[i], name), { cache: false });
-      const list = (Array.isArray(data?.questions) ? data.questions : []).map((q) => ({ ...q, altered: !isVerbatim(q, chunks[i]) }));
+      const list = (Array.isArray(data?.questions) ? data.questions : []).map((q) => ({ ...q, altered: !isVerbatim(q, chunks[i]), ref: checkRef({ page: q.page }, chunks[i]) }));
       lastOpenSkipped += Number(data?.openSkipped) || 0;
       total += await addQuestions(list, sourceId, "quiz");
     } catch (e) {
@@ -1901,7 +1999,7 @@ $("#gen-form").addEventListener("submit", async (e) => {
       setStatus(done, `Lot ${round} : ${part.name}, partie ${part.n + 1} (${angle.split(" (")[0]})…`);
       try {
         const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing, lang, examples), { signal: genCtl.signal, modelTier: tier, cache: false });
-        const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4);
+        const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4).map((q) => ({ ...q, ref: checkRef(q, part.text) }));
         const added = await addQuestions(list, part.sourceId, "ia");
         done += added;
         fails = 0;
@@ -2041,6 +2139,7 @@ function renderQuestion() {
     if (fb) {
       box.className = "feedback " + (fb.ok ? "good" : "bad");
       box.innerHTML = `<strong>${fb.ok ? cheer() : `Pas tout à fait : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${v.explanation ? `<span>${esc(v.explanation)}</span>` : ""}${q.disputed ? '<small>Question ambiguë : deux vérifications de Claude n\'ont pas donné la même réponse. En cas de doute, pose ta question ci-dessous.</small>' : ""}`;
+      box.insertAdjacentHTML("beforeend", refHTML(q));
       $("#q-ask").innerHTML = askBox(q.id, it.o[chosen]);
       $("#q-ask").classList.remove("hidden");
     } else { box.className = "feedback hidden"; $("#q-ask").classList.add("hidden"); }
@@ -2150,6 +2249,7 @@ function renderResult(a) {
         <p><strong>${esc(shown(d.q).question)}</strong></p>
         <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(shown(d.q).choices[orig])}</span></li>`).join("")}</ul>
         ${shown(d.q).explanation ? `<p class="expl">${esc(shown(d.q).explanation)}</p>` : ""}
+        ${refHTML(d.q)}
         <div data-askslot="${d.q.id}" data-choice="${d.it.a === null ? "" : d.it.o[d.it.a]}"><button type="button" class="chip" data-openask>Je ne comprends pas : poser une question</button></div>
       </div>`).join("")}</div>`;
   setView("result");
@@ -2197,7 +2297,7 @@ function renderBank(reset) {
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
       <p><strong>${esc(q.question)}</strong></p>
       <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
-      ${q.explanation ? `<p class="expl">${esc(q.explanation)}</p>` : ""}</div>`;
+      ${q.explanation ? `<p class="expl">${esc(q.explanation)}</p>` : ""}${refHTML(q)}</div>`;
   }).join(""));
   bankShown += page.length;
   $("#bank-more").classList.toggle("hidden", bankShown >= list.length);
