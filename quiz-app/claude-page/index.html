@@ -262,6 +262,14 @@ button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; backgroun
 .tq > div { display: flex; flex-direction: column; gap: 4px; }
 .tq .lang { font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 @media (max-width: 720px) { .tq { grid-template-columns: 1fr; } }
+.ask { display: flex; flex-direction: column; gap: 8px; border-top: 2px dashed var(--line); padding-top: 12px; }
+.ask .ask-title { font: 600 16px var(--font-display); color: var(--violet); display: flex; align-items: center; gap: 6px; }
+.ask form { display: flex; gap: 8px; }
+.ask form input { flex: 1; }
+.msg { padding: 9px 13px; border-radius: 14px; max-width: 92%; white-space: pre-wrap; }
+.msg.me { align-self: flex-end; background: var(--violet-soft); border-bottom-right-radius: 4px; }
+.msg.ai { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
+.ask-sugg { display: flex; flex-wrap: wrap; gap: 6px; }
 .log { font-size: 14px; color: var(--muted); max-height: 160px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 
 /* Bulle de traduction d'un mot */
@@ -513,6 +521,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <p class="qtext" id="q-text"></p>
       <div class="choices" id="q-choices"></div>
       <div id="q-feedback" class="feedback hidden"></div>
+      <div id="q-ask" class="hidden"></div>
       <div class="qtools">
         <button type="button" class="chip" id="q-translate"><svg><use href="#i-lang"/></svg>Traduire en français</button>
         <form class="dico-box" id="dico-form"><input type="search" id="dico-input" placeholder="Un mot à traduire ? ex. lead time" aria-label="Mot à traduire"><button type="submit" class="small">Traduire</button></form>
@@ -537,11 +546,11 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <select id="bank-theme" style="flex:1 1 160px;width:auto" aria-label="Thème de cours"></select>
       <select id="bank-topic" style="flex:1 1 160px;width:auto" aria-label="Notion"></select>
       <select id="bank-filter" style="flex:1 1 140px;width:auto" aria-label="Filtre">
-        <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option><option value="altered">Texte différent du quiz ?</option><option value="quiz">Questions de mes quiz</option>
+        <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponses discutables ou non vérifiées</option><option value="altered">Texte différent du quiz ?</option><option value="quiz">Questions de mes quiz</option>
       </select>
     </div>
     <div class="row between"><p class="hint" id="bank-count"></p>
-      <div class="row"><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
+      <div class="row"><button type="button" class="small" id="bank-verify"><svg><use href="#i-check"/></svg>Vérifier les réponses non vérifiées</button><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
     <div id="clean-panel" class="panel hidden"></div>
     <div id="bank-list" class="stack"></div>
     <div><button type="button" id="bank-more" class="hidden">Afficher plus</button></div>
@@ -1247,6 +1256,139 @@ $("#lex-list").addEventListener("click", (e) => {
 });
 
 // ======================================================================
+// « Je ne comprends pas » : poser une question à Claude sur une correction
+// ======================================================================
+const askThreads = new Map(); // id de question -> [{role, content}]
+const ASK_SUGGESTIONS = ["Pourquoi ma réponse est fausse ?", "Explique-moi plus simplement", "Donne-moi un exemple concret", "Comment retenir ça ?"];
+function askBox(qid, choiceOrig) {
+  const thread = askThreads.get(qid) || [];
+  return `<div class="ask" data-ask="${qid}" data-choice="${choiceOrig ?? ""}">
+    <span class="ask-title"><svg width="18" height="18"><use href="#i-spark"/></svg>Tu ne comprends pas ? Pose ta question</span>
+    ${thread.map((m) => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("")}
+    ${thread.length ? "" : `<div class="ask-sugg">${ASK_SUGGESTIONS.map((t) => `<button type="button" class="chip" data-sugg="${esc(t)}">${esc(t)}</button>`).join("")}</div>`}
+    <form><input type="text" placeholder="Écris ta question ici" aria-label="Ta question" maxlength="600"><button type="submit" class="small violet">Envoyer</button></form>
+  </div>`;
+}
+function tutorContext(q, choiceOrig) {
+  const right = q.choices[q.answer];
+  const mine = choiceOrig === "" || choiceOrig == null ? null : q.choices[Number(choiceOrig)];
+  return [
+    "Tu es un professeur de supply chain patient et bienveillant. Une étudiante ou un étudiant francophone révise un examen de supply chain (QCM, souvent en anglais) et ne comprend pas une correction.",
+    "Réponds en français, simplement, en 150 mots maximum, avec un exemple concret quand c'est utile. Va droit au but. Garde les termes techniques anglais entre parenthèses.",
+    "Sois rigoureux : si, après réflexion, la réponse indiquée comme juste te paraît fausse, dis-le clairement et explique pourquoi.",
+    "",
+    `Question : ${q.question}`,
+    ...q.choices.map((c, j) => `${LETTERS[j]}) ${c}`),
+    `Bonne réponse : ${LETTERS[q.answer]}) ${right}`,
+    mine === null ? "L'étudiant n'a pas répondu." : `Réponse de l'étudiant : ${LETTERS[Number(choiceOrig)]}) ${mine}${Number(choiceOrig) === q.answer ? " (juste)" : " (fausse)"}`,
+    q.explanation ? `Explication déjà donnée : ${q.explanation}` : "",
+  ].filter((x) => x !== "").join("\n");
+}
+async function sendAsk(box, text) {
+  const qid = box.dataset.ask;
+  const q = S.qById.get(qid);
+  if (!q || !text.trim()) return;
+  if (!SAMPLE) return toast("Claude n'est pas disponible dans cette vue.", true);
+  const thread = askThreads.get(qid) || [];
+  thread.push({ role: "user", content: text.trim() });
+  askThreads.set(qid, thread);
+  const rerender = () => { const fresh = askBox(qid, box.dataset.choice); const tmp = document.createElement("div"); tmp.innerHTML = fresh; const nb = tmp.firstElementChild; box.replaceWith(nb); box = nb; return nb; };
+  let nb = rerender();
+  const live = document.createElement("div");
+  live.className = "msg ai";
+  live.textContent = "Claude réfléchit…";
+  nb.querySelector("form").before(live);
+  nb.querySelector("form button").disabled = true;
+  try {
+    const msgs = [{ role: "user", content: tutorContext(q, box.dataset.choice) }];
+    for (const m of thread) msgs.push({ role: m.role, content: m.content });
+    // Les rôles consécutifs identiques sont fusionnés par Claude ; la conversation se termine par l'étudiant.
+    const { text: answer } = await SAMPLE(msgs.slice(-13), { cache: false, onText: ({ text: t }) => { live.textContent = t; } });
+    thread.push({ role: "assistant", content: answer });
+  } catch (e) {
+    thread.pop();
+    toast(e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Claude n'a pas pu répondre. Réessaie.", true);
+  }
+  nb = rerender();
+  nb.querySelector("input").focus();
+}
+document.addEventListener("submit", (e) => {
+  const box = e.target.closest(".ask");
+  if (!box) return;
+  e.preventDefault();
+  const input = box.querySelector("input");
+  sendAsk(box, input.value);
+});
+document.addEventListener("click", (e) => {
+  const sugg = e.target.closest("[data-sugg]");
+  if (sugg) return sendAsk(sugg.closest(".ask"), sugg.dataset.sugg);
+  const open = e.target.closest("[data-openask]");
+  if (open) {
+    const slot = open.closest("[data-askslot]");
+    slot.innerHTML = askBox(slot.dataset.askslot, slot.dataset.choice);
+    slot.querySelector("input").focus();
+  }
+});
+
+// ======================================================================
+// Double vérification des réponses des quiz sans corrigé
+// ======================================================================
+// Claude (modèle le plus puissant) résout chaque question sans voir la réponse trouvée
+// la première fois. Si les deux concordent, la réponse est confirmée ; sinon on garde la
+// solution la plus approfondie et la question est marquée « discutable ».
+async function verifyAnswers(qs, onStatus) {
+  if (!SAMPLE || !qs.length) return { confirmed: 0, changed: 0, disputed: 0 };
+  let confirmed = 0, changed = 0, disputed = 0;
+  for (let i = 0; i < qs.length; i += 8) {
+    const part = qs.slice(i, i + 8);
+    onStatus?.(`Vérification des réponses : ${Math.min(i + 8, qs.length)} sur ${qs.length}`);
+    try {
+      const r = await SAMPLE.json([
+        "Tu es un expert en supply chain et logistique. Résous chacun de ces QCM avec rigueur : raisonne soigneusement, fais les calculs si besoin, appuie-toi sur les définitions standards de la discipline (APICS/ASCM, manuels de référence).",
+        "Pour chaque question, donne l'indice (à partir de 0) de la seule bonne proposition, indique si tu en es certain, et écris une explication en français de 2 à 3 phrases.",
+        'Réponds uniquement avec un objet JSON : {"answers":[{"n":0,"answer":0,"certain":true,"explanation":"…"}]}',
+        "",
+        part.map((q, n) => `Question ${n} : ${q.question}\n${q.choices.map((c, j) => `  ${j}) ${c}`).join("\n")}`).join("\n\n"),
+      ].join("\n"), { modelTier: "complex", cache: false });
+      for (const a of Array.isArray(r?.answers) ? r.answers : []) {
+        const q = part[Number(a.n)];
+        const ans = Number(a.answer);
+        if (!q || !(ans >= 0 && ans < q.choices.length)) continue;
+        const prev = q.answer;
+        const target = S.batches.get(q.batchId)?.questions.find((x) => x.id === q.id) || q;
+        for (const o of new Set([q, target])) {
+          if (ans === o.answer) { o.guessed = false; o.disputed = false; }
+          else { o.answer = ans; o.explanation = String(a.explanation || o.explanation); o.guessed = false; o.disputed = a.certain === false; }
+          o.verified = true;
+        }
+        if (ans === prev) confirmed++;
+        else if (a.certain === false) disputed++;
+        else changed++;
+      }
+    } catch (e) {
+      if (FATAL.has(e?.code)) break;
+    }
+    // Enregistre les documents de questions touchés.
+    for (const bid of new Set(part.map((q) => q.batchId))) {
+      const b = S.batches.get(bid);
+      if (b) await write(col("qbatches").doc(bid), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(({ batchId, sourceId, ...rest }) => rest) }).catch(() => {});
+    }
+  }
+  reindex();
+  return { confirmed, changed, disputed };
+}
+$("#bank-verify").addEventListener("click", async (e) => {
+  const qs = S.questions.filter((q) => q.guessed);
+  if (!qs.length) return toast("Toutes tes réponses sont déjà vérifiées.");
+  if (!SAMPLE) return toast("Claude n'est pas disponible dans cette vue.", true);
+  e.target.disabled = true;
+  const r = await verifyAnswers(qs, (m) => ($("#bank-count").textContent = m));
+  e.target.disabled = false;
+  toast(`Vérification terminée : ${r.confirmed} réponse(s) confirmée(s), ${r.changed} corrigée(s)${r.disputed ? `, ${r.disputed} discutable(s)` : ""}.`);
+  renderBank(true);
+});
+
+// ======================================================================
 // Encouragements et confettis
 // ======================================================================
 const CHEERS = ["Bonne réponse !", "Exact, bien joué !", "Parfait !", "Oui, c'est ça !", "Excellent !", "Bravo !"];
@@ -1458,6 +1600,8 @@ async function extractQuiz(sourceId, name, chunks, onStatus) {
       if (FATAL.has(e.code)) throw { code: e.code, message: SAMPLE_ERRORS[e.code] || e.message };
     }
   }
+  const unsure = S.questions.filter((q) => q.sourceId === sourceId && q.guessed);
+  if (unsure.length) await verifyAnswers(unsure, onStatus);
   return total;
 }
 
@@ -1802,8 +1946,10 @@ function renderQuestion() {
     const box = $("#q-feedback");
     if (fb) {
       box.className = "feedback " + (fb.ok ? "good" : "bad");
-      box.innerHTML = `<strong>${fb.ok ? cheer() : `Pas tout à fait : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${v.explanation ? `<span>${esc(v.explanation)}</span>` : ""}${q.guessed ? '<small>Réponse proposée par Claude, à vérifier avec ton cours.</small>' : ""}`;
-    } else box.className = "feedback hidden";
+      box.innerHTML = `<strong>${fb.ok ? cheer() : `Pas tout à fait : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${v.explanation ? `<span>${esc(v.explanation)}</span>` : ""}${q.disputed ? '<small>Question ambiguë : deux vérifications de Claude n\'ont pas donné la même réponse. En cas de doute, pose ta question ci-dessous.</small>' : ""}`;
+      $("#q-ask").innerHTML = askBox(q.id, it.o[chosen]);
+      $("#q-ask").classList.remove("hidden");
+    } else { box.className = "feedback hidden"; $("#q-ask").classList.add("hidden"); }
   }
   const combo = quiz.combo || 0;
   $("#quiz-combo").classList.toggle("hidden", exam || combo < 2);
@@ -1909,6 +2055,7 @@ function renderResult(a) {
         <p><strong>${esc(shown(d.q).question)}</strong></p>
         <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(shown(d.q).choices[orig])}</span></li>`).join("")}</ul>
         ${shown(d.q).explanation ? `<p class="expl">${esc(shown(d.q).explanation)}</p>` : ""}
+        <div data-askslot="${d.q.id}" data-choice="${d.it.a === null ? "" : d.it.o[d.it.a]}"><button type="button" class="chip" data-openask>Je ne comprends pas : poser une question</button></div>
       </div>`).join("")}</div>`;
   setView("result");
   document.querySelectorAll("#nav button").forEach((b) => b.removeAttribute("aria-current"));
@@ -1932,7 +2079,7 @@ function bankFiltered() {
     (!topic || q.topic === topic) &&
     (!term || stemKey(q.question).includes(term)) &&
     (f !== "wrong" || statOf(q.id)[1] > 0) &&
-    (f !== "guessed" || q.guessed) &&
+    (f !== "guessed" || q.guessed || q.disputed) &&
     (f !== "altered" || q.altered) &&
     (f !== "quiz" || q.origin === "quiz"));
 }
@@ -1951,7 +2098,7 @@ function renderBank(reset) {
   $("#bank-list").insertAdjacentHTML("beforeend", page.map((q) => {
     const s = statOf(q.id);
     return `<div class="panel" data-q="${q.id}">
-      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}${q.altered ? '<span class="pill bad">texte différent du quiz ?</span>' : ""}
+      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.disputed ? '<span class="pill bad">réponse discutable</span>' : q.guessed ? '<span class="pill amber">réponse pas encore vérifiée</span>' : ""}${q.altered ? '<span class="pill bad">texte différent du quiz ?</span>' : ""}
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
       <p><strong>${esc(q.question)}</strong></p>
       <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
