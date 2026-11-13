@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Supply Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout : barre d'onglets fixe en haut, une colonne de 920px max ; le quiz occupe tout l'écran utile. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #5d6b78;
+  --line: #dde3e9;
+  --accent: #1d6a86;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0f5;
+  --amber: #c27a0e;
+  --amber-soft: #fbf1df;
+  --good: #1c8a4c;
+  --good-soft: #e3f4ea;
+  --bad: #c43a31;
+  --bad-soft: #fbe7e5;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171d; --surface: #19222a; --ink: #e6ecf1; --muted: #93a2af; --line: #2a3640;
+    --accent: #5cb3d1; --accent-ink: #0d1a20; --accent-soft: #1b3440;
+    --amber: #e3a34a; --amber-soft: #3a2c16; --good: #57c486; --good-soft: #173527; --bad: #ef7a70; --bad-soft: #3d1f1d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #19222a; --ink: #e6ecf1; --muted: #93a2af; --line: #2a3640;
+  --accent: #5cb3d1; --accent-ink: #0d1a20; --accent-soft: #1b3440;
+  --amber: #e3a34a; --amber-soft: #3a2c16; --good: #57c486; --good-soft: #173527; --bad: #ef7a70; --bad-soft: #3d1f1d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.5 var(--font-body); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: 34px; letter-spacing: -0.01em; }
+h2 { font-size: 24px; }
+h3 { font-size: 19px; }
+p { margin: 0; }
+small, .hint { color: var(--muted); font-size: 15px; }
+.hidden { display: none !important; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+header { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.head-in { max-width: 960px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+.brand { font-family: var(--font-display); font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 26px; height: 26px; }
+nav { display: flex; flex-wrap: wrap; gap: 2px; }
+nav button { border: 0; background: none; padding: 7px 11px; border-radius: 7px; color: var(--muted); font: 600 15px var(--font-body); cursor: pointer; }
+nav button:hover { background: var(--bg); color: var(--ink); }
+nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+
+main { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+.view { display: none; flex-direction: column; gap: 18px; }
+.view.active { display: flex; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.row.between { justify-content: space-between; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.lead { font-size: 19px; color: var(--muted); max-width: 65ch; }
+.notice { border-left: 4px solid var(--amber); background: var(--amber-soft); padding: 12px 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+.notice.bad { border-color: var(--bad); background: var(--bad-soft); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.tile b { font-family: var(--font-display); font-size: 34px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tile span { color: var(--muted); font-size: 15px; }
+.tile.good b { color: var(--good); } .tile.mid b { color: var(--amber); } .tile.bad b { color: var(--bad); }
+
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.steps li::before { content: "Étape " counter(s); font: 700 13px var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+.steps li.done { border-color: var(--good); }
+.steps li.done::before { content: "Étape " counter(s) " · fait"; color: var(--good); }
+
+label.field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 15px; flex: 1 1 200px; }
+input[type=text], input[type=number], input[type=search], select, textarea {
+  width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: 400 16px var(--font-body); background: var(--surface); color: var(--ink);
+}
+textarea { resize: vertical; }
+fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0; padding: 10px 12px; }
+legend { font-weight: 600; font-size: 15px; padding: 0 4px; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 18px; max-height: 260px; overflow: auto; }
+.checks label { display: flex; gap: 6px; align-items: center; font-size: 16px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg label { padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 15px; display: flex; gap: 6px; align-items: center; }
+.seg label:has(input:checked) { background: var(--accent-soft); color: var(--accent); }
+.seg input { accent-color: var(--accent); }
+
+button, .btn { font: 600 16px var(--font-body); border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.small { padding: 4px 10px; font-size: 14px; }
+button.link { border: 0; background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; min-height: 130px; border: 2px dashed var(--line); border-radius: var(--radius); cursor: pointer; color: var(--muted); padding: 16px; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { color: var(--ink); }
+
+.list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.list > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.list > div:first-child { border-top: 0; }
+.list .grow { flex: 1 1 240px; display: flex; flex-direction: column; }
+
+.pill { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.pill.plain { background: var(--bg); color: var(--muted); }
+.pill.amber { background: var(--amber-soft); color: var(--amber); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+.progress { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(130px, 1.3fr) 2fr 48px; gap: 12px; align-items: center; }
+.bar-label small { display: block; }
+.bar-track { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; }
+.bar-fill.good { background: var(--good); } .bar-fill.mid { background: var(--amber); } .bar-fill.bad { background: var(--bad); }
+.bar-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Lecteur de quiz */
+.quiz-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; color: var(--muted); }
+.quiz-top .push { margin-left: auto; }
+.timer { font: 700 24px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+.timer.urgent { color: var(--bad); }
+.grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.grid button { width: 38px; padding: 4px 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.grid button.done { background: var(--accent-soft); border-color: var(--accent-soft); }
+.grid button.flagged { box-shadow: inset 0 -3px 0 var(--amber); }
+.grid button.current { outline: 2px solid var(--accent); }
+.qcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.qcard .qtext { font-size: 21px; font-weight: 600; line-height: 1.4; white-space: pre-wrap; }
+.choices { display: grid; gap: 10px; }
+.choice { display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 9px; font-weight: 400; }
+.choice .key { flex: 0 0 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--bg); font-weight: 700; font-size: 14px; }
+.choice.selected { border-color: var(--accent); background: var(--accent-soft); }
+.choice.selected .key { background: var(--accent); color: var(--accent-ink); }
+.choice.right { border-color: var(--good); background: var(--good-soft); }
+.choice.right .key { background: var(--good); color: var(--surface); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.choice.wrong .key { background: var(--bad); color: var(--surface); }
+.choice:disabled { opacity: 1; cursor: default; color: var(--ink); }
+.feedback { padding: 12px 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
+.feedback.good { background: var(--good-soft); } .feedback.bad { background: var(--bad-soft); }
+.quiz-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.flag { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+
+.corr { border-left: 4px solid var(--good); }
+.corr.wrong { border-left-color: var(--bad); }
+.opts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.opts li { padding: 4px 8px; border-radius: 6px; display: flex; gap: 8px; }
+.opts li.right { background: var(--good-soft); font-weight: 600; }
+.opts li.wrong { background: var(--bad-soft); text-decoration: line-through; }
+.expl { background: var(--bg); padding: 8px 12px; border-radius: 8px; font-size: 16px; }
+.qhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.qhead .push { margin-left: auto; }
+
+.log { font-size: 14px; color: var(--muted); max-height: 140px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+
+dialog { border: 1px solid var(--line); border-radius: 12px; padding: 20px; max-width: 460px; width: calc(100% - 32px); background: var(--surface); color: var(--ink); }
+dialog::backdrop { background: rgba(10, 20, 30, .45); }
+dialog .row { justify-content: flex-end; margin-top: 16px; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 10px; max-width: calc(100vw - 32px); z-index: 50; }
+.toast.error { background: var(--bad); color: #fff; }
+
+@media (max-width: 560px) {
+  h1 { font-size: 28px; }
+  .bar { grid-template-columns: 1fr 1fr 44px; }
+  .qcard { padding: 16px; }
+  .qcard .qtext { font-size: 19px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="9" width="26" height="17" rx="2" fill="var(--accent)"/><path d="M8 9v17M13 9v17M18 9v17M23 9v17" stroke="var(--surface)" stroke-width="1.6"/><rect x="3" y="5" width="12" height="4" rx="1" fill="var(--amber)"/></svg>
+      Quiz Supply Chain
+    </div>
+    <nav id="nav" aria-label="Sections">
+      <button type="button" data-view="home" aria-current="page">Accueil</button>
+      <button type="button" data-view="sources">Mes documents</button>
+      <button type="button" data-view="generate">Créer des questions</button>
+      <button type="button" data-view="practice">S'entraîner</button>
+      <button type="button" data-view="exam">Examen blanc</button>
+      <button type="button" data-view="bank">Mes questions</button>
+      <button type="button" data-view="history">Résultats</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div id="boot-msg" class="notice">Chargement de tes données…</div>
+
+  <!-- ACCUEIL -->
+  <section id="view-home" class="view active" aria-labelledby="home-title">
+    <h1 id="home-title">Prépare ton examen de supply chain</h1>
+    <p class="lead">Dépose tes cours, ton livre et tes quiz d'école, laisse Claude en tirer des centaines de QCM, puis entraîne-toi dans les conditions de l'examen : 80 questions en 3 heures.</p>
+    <div id="resume-box" class="notice hidden">
+      <strong>Une série est en cours.</strong>
+      <div class="row"><button type="button" class="primary" id="resume-btn">Reprendre</button><button type="button" id="drop-cur-btn">L'abandonner</button></div>
+    </div>
+    <div class="tiles" id="home-tiles"></div>
+    <h2>Par où commencer</h2>
+    <ol class="steps" id="home-steps">
+      <li id="step-1"><strong>Dépose tes documents</strong><span class="hint">Le PDF du cours, le livre, le quiz d'entraînement de l'école.</span><button type="button" class="link" data-goto="sources">Mes documents</button></li>
+      <li id="step-2"><strong>Crée des questions</strong><span class="hint">Claude lit tes documents et rédige des QCM corrigés et expliqués.</span><button type="button" class="link" data-goto="generate">Créer des questions</button></li>
+      <li id="step-3"><strong>Entraîne-toi</strong><span class="hint">Par thème, avec la correction après chaque réponse.</span><button type="button" class="link" data-goto="practice">S'entraîner</button></li>
+      <li id="step-4"><strong>Passe un examen blanc</strong><span class="hint">80 questions, chrono de 3 h, note sur 20.</span><button type="button" class="link" data-goto="exam">Examen blanc</button></li>
+    </ol>
+    <h2>Mes thèmes à retravailler</h2>
+    <div id="home-topics" class="bars"></div>
+  </section>
+
+  <!-- DOCUMENTS -->
+  <section id="view-sources" class="view" aria-labelledby="src-title">
+    <h1 id="src-title">Mes documents</h1>
+    <form id="upload-form" class="panel">
+      <fieldset>
+        <legend>Ce que tu déposes</legend>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="kind" value="course" checked> Un cours ou un livre</label>
+          <label><input type="radio" name="kind" value="quiz"> Un quiz (questions d'entraînement)</label>
+        </div>
+        <p class="hint" id="kind-hint">Claude s'en servira pour créer de nouvelles questions.</p>
+      </fieldset>
+      <label class="drop" id="drop" for="file-input">
+        <strong>Clique ici ou dépose tes fichiers</strong>
+        <span>PDF, Word (.docx) ou texte (.txt, .md, .csv)</span>
+        <span id="drop-files"></span>
+      </label>
+      <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md,.csv,.json" class="hidden">
+      <details>
+        <summary>Ou colle du texte</summary>
+        <div class="stack" style="margin-top:10px">
+          <label class="field" for="paste-name">Nom<input type="text" id="paste-name" placeholder="ex. Chapitre 3, gestion des stocks"></label>
+          <label class="field" for="paste-text">Texte<textarea id="paste-text" rows="7" placeholder="Colle ici un cours ou les questions d'un quiz"></textarea></label>
+        </div>
+      </details>
+      <div class="row"><button type="submit" class="primary" id="upload-btn">Ajouter</button><span id="upload-status" class="hint"></span></div>
+      <div id="upload-log" class="log"></div>
+    </form>
+    <p class="hint">Un PDF scanné (une photo de page, sans texte sélectionnable) ne peut pas être lu. Un très gros livre prend une ou deux minutes à importer.</p>
+    <div id="sources-list" class="list"></div>
+  </section>
+
+  <!-- GENERATION -->
+  <section id="view-generate" class="view" aria-labelledby="gen-title">
+    <h1 id="gen-title">Créer des questions</h1>
+    <form id="gen-form" class="panel">
+      <fieldset>
+        <legend>Documents à utiliser</legend>
+        <div id="gen-sources" class="checks"></div>
+      </fieldset>
+      <div class="row">
+        <label class="field" for="gen-count">Nombre de questions à créer<input type="number" id="gen-count" value="100" min="10" max="3000" step="10"></label>
+        <label class="field" for="gen-tier">Qualité
+          <select id="gen-tier">
+            <option value="default" selected>Normale (recommandée)</option>
+            <option value="complex">Maximale (plus lent)</option>
+          </select>
+        </label>
+      </div>
+      <label class="field" for="gen-focus">Consigne facultative<input type="text" id="gen-focus" placeholder="ex. insister sur les calculs de stock de sécurité et la méthode ABC"></label>
+      <div class="row">
+        <button type="submit" class="primary" id="gen-btn">Créer les questions</button>
+        <button type="button" id="gen-stop" class="hidden">Arrêter</button>
+      </div>
+      <p class="hint">Claude rédige les questions par lots de 20, à partir de passages successifs de tes documents. Elles s'ajoutent à ta banque au fur et à mesure : tu peux commencer à t'entraîner pendant ce temps, mais garde cette page ouverte jusqu'à la fin. Compte environ une minute par lot. La génération utilise ton forfait Claude.</p>
+    </form>
+    <div id="gen-progress" class="panel hidden">
+      <div class="row between"><strong id="gen-status"></strong><span id="gen-pill" class="pill"></span></div>
+      <div class="progress"><div id="gen-bar"></div></div>
+      <div id="gen-log" class="log"></div>
+    </div>
+  </section>
+
+  <!-- ENTRAINEMENT -->
+  <section id="view-practice" class="view" aria-labelledby="pr-title">
+    <h1 id="pr-title">S'entraîner</h1>
+    <form id="practice-form" class="panel">
+      <div class="seg" role="radiogroup">
+        <label><input type="radio" name="pmode" value="practice" checked> Toutes les questions</label>
+        <label><input type="radio" name="pmode" value="review"> Seulement mes erreurs</label>
+      </div>
+      <label class="field" for="pr-count" style="max-width:240px">Nombre de questions<input type="number" id="pr-count" value="20" min="1" max="500"></label>
+      <fieldset>
+        <legend>Thèmes (aucun coché = tous)</legend>
+        <div id="pr-topics" class="checks"></div>
+      </fieldset>
+      <div><button type="submit" class="primary">Commencer</button></div>
+    </form>
+  </section>
+
+  <!-- EXAMEN -->
+  <section id="view-exam" class="view" aria-labelledby="ex-title">
+    <h1 id="ex-title">Examen blanc</h1>
+    <form id="exam-form" class="panel">
+      <p>Comme le jour J : questions tirées au hasard dans toute ta banque, réparties entre les thèmes, et correction seulement à la fin.</p>
+      <div class="row">
+        <label class="field" for="ex-count">Questions<input type="number" id="ex-count" value="80" min="1" max="500"></label>
+        <label class="field" for="ex-min">Durée en minutes<input type="number" id="ex-min" value="180" min="1" max="600"></label>
+      </div>
+      <p class="hint" id="ex-pace">Soit 2 min 15 s par question.</p>
+      <div><button type="submit" class="primary">Démarrer l'examen</button></div>
+    </form>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="view-quiz" class="view" aria-label="Questionnaire">
+    <div class="quiz-top">
+      <span id="quiz-label"></span>
+      <span id="quiz-timer" class="timer hidden"></span>
+      <button type="button" class="push" id="quiz-end">Terminer</button>
+    </div>
+    <div class="progress"><div id="quiz-bar"></div></div>
+    <div id="quiz-grid" class="grid hidden"></div>
+    <article class="qcard">
+      <div class="qhead" id="q-meta"></div>
+      <p class="qtext" id="q-text"></p>
+      <div class="choices" id="q-choices"></div>
+      <div id="q-feedback" class="feedback hidden"></div>
+    </article>
+    <div class="quiz-nav">
+      <button type="button" id="q-prev">← Précédente</button>
+      <label class="flag" for="q-flag"><input type="checkbox" id="q-flag"> À revoir</label>
+      <button type="button" id="q-next" class="primary">Suivante →</button>
+    </div>
+    <p class="hint">Raccourcis clavier : A, B, C, D pour répondre, flèches pour changer de question.</p>
+  </section>
+
+  <!-- RESULTAT -->
+  <section id="view-result" class="view" aria-label="Résultat"></section>
+
+  <!-- BANQUE -->
+  <section id="view-bank" class="view" aria-labelledby="bank-title">
+    <h1 id="bank-title">Mes questions</h1>
+    <div class="row">
+      <input type="search" id="bank-search" placeholder="Rechercher un mot" style="flex:2 1 200px;width:auto">
+      <select id="bank-topic" style="flex:1 1 160px;width:auto" aria-label="Thème"></select>
+      <select id="bank-filter" style="flex:1 1 140px;width:auto" aria-label="Filtre">
+        <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option>
+      </select>
+    </div>
+    <p class="hint" id="bank-count"></p>
+    <div id="bank-list" class="stack"></div>
+    <div><button type="button" id="bank-more" class="hidden">Afficher plus</button></div>
+  </section>
+
+  <!-- HISTORIQUE -->
+  <section id="view-history" class="view" aria-labelledby="hist-title">
+    <h1 id="hist-title">Résultats</h1>
+    <div id="history" class="list"></div>
+  </section>
+</main>
+
+<dialog id="dlg"><p id="dlg-text"></p><div class="row" id="dlg-btns"></div></dialog>
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script>
+"use strict";
+// ======================================================================
+// Outils
+// ======================================================================
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const LETTERS = "ABCDEFGH";
+const MODE_LABEL = { practice: "Entraînement", review: "Révision des erreurs", exam: "Examen blanc" };
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fr = (n) => Number(n).toLocaleString("fr-FR");
+const note20 = (s, t) => (t ? ((s / t) * 20).toFixed(1).replace(".", ",") : "–");
+const stemKey = (t) => String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+function toast(msg, isError = false) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "toast" + (isError ? " error" : "");
+  clearTimeout(toast.h);
+  toast.h = setTimeout(() => t.classList.add("hidden"), 5000);
+}
+
+// Fenêtre de confirmation maison (confirm() est bloqué dans la page).
+function ask(text, buttons = [["Annuler", false], ["OK", true]]) {
+  return new Promise((resolve) => {
+    const dlg = $("#dlg");
+    $("#dlg-text").textContent = text;
+    const box = $("#dlg-btns");
+    box.innerHTML = "";
+    buttons.forEach(([label, value], i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      if (i === buttons.length - 1) b.className = "primary";
+      b.onclick = () => { dlg.close(); resolve(value); };
+      box.append(b);
+    });
+    dlg.oncancel = () => resolve(buttons[0][1]);
+    dlg.showModal();
+  });
+}
+
+// ======================================================================
+// Stockage : chaque personne a son espace privé dans la base de l'artefact.
+// ======================================================================
+let DB = null, ROOT = null;
+const S = { sources: [], batches: new Map(), questions: [], qById: new Map(), stats: {}, attempts: [], cur: null };
+const STAT_SHARDS = 8;
+
+const chains = new Map();
+function write(ref, op, data) {
+  // Une seule écriture à la fois par document.
+  const prev = chains.get(ref.path) || Promise.resolve();
+  const next = prev.catch(() => {}).then(() => (op === "delete" ? ref.delete() : ref[op](data)));
+  chains.set(ref.path, next);
+  return next.catch((e) => {
+    if (e?.code === "quota_exceeded") toast("L'espace de stockage est plein : supprime un document ou des questions.", true);
+    else toast("Enregistrement impossible : " + (e?.message || e?.code || "erreur"), true);
+    throw e;
+  });
+}
+const col = (name) => ROOT.collection(name);
+
+function withTimeout(promise, ms = 15000) {
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej({ code: "timeout", message: "Les données ne répondent pas pour l'instant." }), ms))]);
+}
+
+async function loadAll() {
+  const [src, qb, st, at, misc] = await withTimeout(Promise.all([
+    col("sources").limit(1000).get(), col("qbatches").limit(1000).get(), col("stats").limit(50).get(),
+    col("attempts").limit(1000).get(), col("misc").limit(10).get(),
+  ]));
+  S.sources = src.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.createdAt - b.createdAt);
+  S.batches = new Map(qb.docs.map((d) => [d.id, { id: d.id, ...structuredClone(d.data()) }]));
+  S.stats = {};
+  st.docs.forEach((d) => Object.assign(S.stats, structuredClone(d.data().m || {})));
+  S.attempts = at.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => b.startedAt - a.startedAt);
+  const cur = misc.docs.find((d) => d.id === "cur");
+  S.cur = cur?.data()?.quiz ? structuredClone(cur.data().quiz) : null;
+  reindex();
+}
+
+function reindex() {
+  S.questions = [];
+  for (const b of S.batches.values()) for (const q of b.questions || []) { q.batchId = b.id; q.sourceId = b.sourceId; S.questions.push(q); }
+  S.qById = new Map(S.questions.map((q) => [q.id, q]));
+}
+
+/** Ajoute des questions (en écartant les doublons), par documents de 150 questions. */
+async function addQuestions(list, sourceId, origin) {
+  const seen = new Set(S.questions.map((q) => stemKey(q.question)));
+  const clean = [];
+  for (const q of list) {
+    const key = stemKey(q.question || "");
+    const choices = (q.choices || []).map((c) => String(c).trim()).filter(Boolean);
+    const answer = Number(q.answer);
+    if (!key || seen.has(key) || choices.length < 2 || !(answer >= 0 && answer < choices.length)) continue;
+    if (new Set(choices.map(stemKey)).size !== choices.length) continue;
+    seen.add(key);
+    clean.push({
+      id: rid(), question: String(q.question).trim(), choices, answer,
+      explanation: String(q.explanation || "").trim(), topic: String(q.topic || "Général").trim().slice(0, 60) || "Général",
+      difficulty: ["facile", "moyen", "difficile"].includes(q.difficulty) ? q.difficulty : "moyen",
+      origin, guessed: !!q.answerGuessed,
+    });
+  }
+  for (let i = 0; i < clean.length; i += 150) {
+    const id = "b" + rid();
+    const body = { sourceId: sourceId || "", createdAt: Date.now(), questions: clean.slice(i, i + 150) };
+    await write(col("qbatches").doc(id), "set", body);
+    S.batches.set(id, { id, ...structuredClone(body) });
+  }
+  reindex();
+  return clean.length;
+}
+
+async function deleteQuestion(qid) {
+  const q = S.qById.get(qid);
+  if (!q) return;
+  const b = S.batches.get(q.batchId);
+  b.questions = b.questions.filter((x) => x.id !== qid);
+  const strip = ({ batchId, sourceId, ...rest }) => rest;
+  if (b.questions.length) await write(col("qbatches").doc(b.id), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(strip) });
+  else { await write(col("qbatches").doc(b.id), "delete"); S.batches.delete(b.id); }
+  reindex();
+}
+
+// Statistiques par question : [vues, erreurs en cours], réparties sur 8 documents.
+const shardOf = (qid) => { let h = 0; for (const c of qid) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % STAT_SHARDS; };
+const dirtyShards = new Set();
+let statsTimer = null;
+function record(qid, correct) {
+  const s = (S.stats[qid] ||= [0, 0]);
+  s[0]++;
+  if (!correct) s[1]++; else if (s[1] > 0) s[1]--;
+  dirtyShards.add(shardOf(qid));
+  clearTimeout(statsTimer);
+  statsTimer = setTimeout(flushStats, 1500);
+}
+async function flushStats() {
+  const shards = [...dirtyShards];
+  dirtyShards.clear();
+  for (const k of shards) {
+    const m = {};
+    for (const [qid, v] of Object.entries(S.stats)) if (shardOf(qid) === k) m[qid] = v;
+    await write(col("stats").doc("s" + k), "set", { m }).catch(() => {});
+  }
+}
+const statOf = (qid) => S.stats[qid] || [0, 0];
+
+// Série en cours, enregistrée pour pouvoir la reprendre (même sur un autre appareil).
+let curTimer = null;
+function saveCur() {
+  clearTimeout(curTimer);
+  curTimer = setTimeout(() => {
+    const ref = col("misc").doc("cur");
+    if (quiz && !quiz.finished) write(ref, "set", { quiz: { ...quiz, feedback: {} } }).catch(() => {});
+  }, 800);
+}
+function clearCur() {
+  clearTimeout(curTimer);
+  S.cur = null;
+  write(col("misc").doc("cur"), "set", { quiz: null }).catch(() => {});
+}
+
+// ======================================================================
+// Lecture des fichiers (PDF, Word, texte). Les bibliothèques se chargent à la demande.
+// ======================================================================
+function loadScript(urls) {
+  return new Promise((resolve, reject) => {
+    const tryAt = (i) => {
+      if (i >= urls.length) return reject(new Error("Impossible de charger le lecteur de fichiers. Vérifie ta connexion."));
+      const s = document.createElement("script");
+      s.src = urls[i];
+      s.onload = () => resolve();
+      s.onerror = () => { s.remove(); tryAt(i + 1); };
+      document.head.append(s);
+    };
+    tryAt(0);
+  });
+}
+let pdfReady = null, docxReady = null;
+function ensurePdf() {
+  return (pdfReady ||= (async () => {
+    await loadScript(["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js", "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js", "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"]);
+    // Le « worker » de pdf.js tourne dans la page elle-même.
+    await loadScript(["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js", "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js", "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js"]);
+    return window.pdfjsLib;
+  })().catch((e) => { pdfReady = null; throw e; }));
+}
+function ensureDocx() {
+  return (docxReady ||= loadScript(["https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js", "https://cdn.jsdelivr.net/npm/mammoth@1.13.0/mammoth.browser.min.js", "https://unpkg.com/mammoth@1.13.0/mammoth.browser.min.js"]).then(() => window.mammoth).catch((e) => { docxReady = null; throw e; }));
+}
+
+async function readFile(file, onProgress) {
+  const ext = (file.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+  if (ext === ".pdf") {
+    const pdfjs = await ensurePdf();
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      let line = "", out = "", lastY = null;
+      for (const it of content.items) {
+        const y = it.transform ? it.transform[5] : null;
+        if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) { out += line.trimEnd() + "\n"; line = ""; }
+        line += it.str + (it.hasEOL ? "\n" : "");
+        lastY = y;
+      }
+      pages.push((out + line).replace(/\n{3,}/g, "\n\n").trim());
+      if (i % 10 === 0) onProgress?.(`page ${i} / ${pdf.numPages}`);
+    }
+    return pages.join("\n\n");
+  }
+  if (ext === ".docx") {
+    const mammoth = await ensureDocx();
+    const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return r.value;
+  }
+  if ([".txt", ".md", ".csv", ".json", ".text", ""].includes(ext)) return await file.text();
+  throw new Error("format non pris en charge (utilise PDF, Word .docx ou texte)");
+}
+
+function chunkText(text, size = 12000) {
+  const paragraphs = text.replace(/\r/g, "").split(/\n{2,}/);
+  const chunks = [];
+  let cur = "";
+  for (const p of paragraphs) {
+    if (cur && cur.length + p.length > size) { chunks.push(cur); cur = ""; }
+    if (p.length > size) for (let i = 0; i < p.length; i += size) chunks.push(p.slice(i, i + size));
+    else cur += (cur ? "\n\n" : "") + p;
+  }
+  if (cur.trim()) chunks.push(cur);
+  return chunks.filter((c) => c.trim().length > 200 || chunks.length === 1);
+}
+
+// ======================================================================
+// Lecture des quiz déjà rédigés (sans IA) : « 1. … / A) … / Réponse : B ».
+// ======================================================================
+const QUESTION_RE = /^\s*(?:(?:q(?:uestion)?\s*)?(\d{1,4})\s*[).:\-–]|q(?:uestion)?\s*(\d{1,4})?\s*[:\-–])\s*(.*)$/i;
+const CHOICE_RE = /^\s*(\*|\(x\)|\[x\]|✓|✔)?\s*[([]?([a-hA-H])[).\]:]\s+(.*?)\s*(\*|\(x\)|\[x\]|✓|✔)?\s*$/;
+const ANSWER_RE = /^\s*(?:bonnes?\s+r[ée]ponses?|r[ée]ponses?(?:\s+correcte)?|corrig[ée]|solution|answer|correct(?:\s+answer)?)\s*[:\-–=]\s*\(?([a-hA-H])\b\)?(.*)$/i;
+const EXPLAIN_RE = /^\s*(?:explications?|justification|commentaire|explanation)\s*[:\-–]\s*(.*)$/i;
+const TOPIC_RE = /^\s*(?:th[èe]me|chapitre|topic|section)\s*[:\-–]\s*(.*)$/i;
+const letterIndex = (l) => l.toUpperCase().charCodeAt(0) - 65;
+
+function parseQuizText(text, defaultTopic = "Général") {
+  const lines = text.replace(/\r/g, "").split("\n");
+  const out = [];
+  let topic = defaultTopic, cur = null, last = null;
+  const finish = () => {
+    if (cur && cur.answer === null && cur.marked !== undefined) cur.answer = cur.marked;
+    if (cur && cur.choices.length >= 2 && cur.answer !== null && cur.answer < cur.choices.length)
+      out.push({ question: cur.question.trim(), choices: cur.choices, answer: cur.answer, explanation: cur.explanation.trim(), topic: cur.topic });
+    cur = null; last = null;
+  };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) continue;
+    const t = line.match(TOPIC_RE);
+    if (t && (!cur || cur.answer !== null)) { finish(); topic = t[1].trim() || defaultTopic; continue; }
+    const a = line.match(ANSWER_RE);
+    if (a && cur) { cur.answer = letterIndex(a[1]); const rest = a[2].replace(/^[\s).:\-–]+/, "").trim(); if (rest) cur.explanation += rest + " "; last = "e"; continue; }
+    const e = line.match(EXPLAIN_RE);
+    if (e && cur) { cur.explanation += e[1] + " "; last = "e"; continue; }
+    const c = line.match(CHOICE_RE);
+    if (c && cur && letterIndex(c[2]) === cur.choices.length && cur.answer === null) {
+      cur.choices.push(c[3].trim());
+      if (c[1] || c[4]) cur.marked = cur.choices.length - 1;
+      last = "c"; continue;
+    }
+    const q = line.match(QUESTION_RE);
+    if (q && q[3].trim()) { finish(); cur = { question: q[3].trim(), choices: [], answer: null, explanation: "", topic }; last = "q"; continue; }
+    if (cur) {
+      if (last === "q" && !cur.choices.length) cur.question += " " + line.trim();
+      else if (last === "c") cur.choices[cur.choices.length - 1] += " " + line.trim();
+      else if (last === "e") cur.explanation += line.trim() + " ";
+    }
+  }
+  finish();
+  return out;
+}
+
+// ======================================================================
+// Claude
+// ======================================================================
+let SAMPLE = null;
+const ANGLES = [
+  "définitions et vocabulaire clés (termes français et équivalents anglais)",
+  "mises en situation en entreprise : quelle décision doit prendre le responsable supply chain ?",
+  "petits calculs avec des valeurs chiffrées (stock de sécurité, point de commande, quantité économique de Wilson, taux de service, rotation et couverture des stocks, coûts)",
+  "comparaisons entre notions proches (flux poussé et tiré, MRP et DRP, VMI et CPFR, ABC et XYZ, etc.)",
+  "causes et conséquences (effet coup de fouet, ruptures, surstocks, allongement des délais)",
+  "indicateurs de performance : interprétation et choix du bon indicateur",
+  "pièges classiques et idées reçues : repérer l'affirmation fausse",
+  "ordre des étapes d'un processus et rôle de chaque acteur de la chaîne",
+  "questions de synthèse qui croisent plusieurs notions du passage",
+  "application à un secteur concret (grande distribution, industrie, e-commerce, santé, agroalimentaire)",
+];
+
+const JSON_SHAPE = `{"questions":[{"question":"…","choices":["…","…","…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"facile|moyen|difficile"}]}`;
+
+function topicsHint() {
+  const t = [...new Set(S.questions.map((q) => q.topic))].slice(0, 40);
+  return t.length ? `Thèmes déjà utilisés (réutilise-les quand ils conviennent, sinon crée un thème court) : ${t.join(" ; ")}.` : "Donne à chaque question un thème court de supply chain, par exemple « Gestion des stocks » ou « Prévision de la demande ».";
+}
+
+function generationPrompt(chunk, sourceName, angle, count, focus, existing) {
+  return [
+    "Tu es un enseignant expert en supply chain et en logistique. Tu prépares un étudiant à un examen de 80 QCM en 3 heures.",
+    `Rédige ${count} nouveaux QCM en français à partir du passage de cours ci-dessous.`,
+    `Angle à privilégier pour ce lot : ${angle}.`,
+    focus ? `Consigne de l'étudiant : ${focus}` : "",
+    "Règles :",
+    "- exactement 4 propositions et une seule bonne réponse ; « answer » est l'indice (0 à 3) de la bonne proposition, réparti au hasard ;",
+    "- des propositions fausses plausibles et de longueur comparable, jamais « toutes les réponses » ni « aucune » ;",
+    "- chaque question se comprend seule, sans « selon le texte » ;",
+    "- pour un calcul, donne toutes les données et vérifie ton résultat ;",
+    "- l'explication (2 à 4 phrases) dit pourquoi la bonne réponse est juste et pourquoi les autres sont fausses ;",
+    "- environ 30 % de questions faciles, 50 % moyennes, 20 % difficiles ;",
+    "- reste fidèle au passage ; tu peux compléter avec des connaissances classiques de supply chain cohérentes avec lui.",
+    topicsHint(),
+    existing.length ? "Questions déjà posées sur ce document, à ne pas répéter ni reformuler :\n" + existing.map((s) => "- " + s).join("\n") : "",
+    `Réponds uniquement avec un objet JSON de cette forme : ${JSON_SHAPE}`,
+    `\n=== PASSAGE : « ${sourceName} » ===\n${chunk}\n=== FIN DU PASSAGE ===`,
+  ].filter(Boolean).join("\n");
+}
+
+function extractionPrompt(chunk, sourceName) {
+  return [
+    "Voici un extrait d'un quiz d'entraînement de supply chain donné par une école. Recopie TOUTES les questions qu'il contient, en français, sans en inventer.",
+    "- Garde l'énoncé et les propositions tels quels (corrige seulement les coupures de ligne).",
+    "- Si la bonne réponse est indiquée dans le document, utilise-la et mets \"answerGuessed\": false.",
+    "- Sinon, trouve la bonne réponse avec tes connaissances de supply chain, mets \"answerGuessed\": true et explique ton raisonnement.",
+    "- Une question ouverte (sans propositions) devient un QCM de 4 propositions dont une seule juste, avec \"answerGuessed\": true.",
+    "- Écris une courte explication pour chaque question.",
+    topicsHint(),
+    `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false}]}`,
+    'Si l\'extrait ne contient aucune question, réponds {"questions":[]}.',
+    `\n=== QUIZ : « ${sourceName} » ===\n${chunk}\n=== FIN ===`,
+  ].join("\n");
+}
+
+const SAMPLE_ERRORS = {
+  not_granted: "Tu n'as pas autorisé la page à utiliser Claude. Recharge la page et accepte la demande pour créer des questions.",
+  sampling_disabled: "Claude n'est pas disponible pour ton compte.",
+  rate_limited: "Limite d'utilisation de Claude atteinte pour le moment. Réessaie un peu plus tard : les questions déjà créées sont gardées.",
+  session_expired: "Ta session Claude a expiré : reconnecte-toi puis recharge la page.",
+  refused: "Claude a refusé ce passage.",
+  invalid_json: "Réponse illisible pour ce lot.",
+  empty_completion: "Réponse vide pour ce lot.",
+  prompt_too_large: "Passage trop long.",
+  upstream_error: "Problème de connexion avec Claude.",
+};
+const FATAL = new Set(["not_granted", "sampling_disabled", "rate_limited", "session_expired", "not_declared", "capability_disabled", "capability_removed", "cancelled"]);
+
+async function chunksOf(sourceId) {
+  const snap = await withTimeout(col("chunks").where("sourceId", "==", sourceId).limit(1000).get());
+  return snap.docs.map((d) => d.data()).sort((a, b) => a.n - b.n);
+}
+
+// ======================================================================
+// Navigation
+// ======================================================================
+const RENDER = { home: renderHome, sources: renderSources, generate: renderGenerate, practice: renderPractice, exam: () => {}, bank: () => renderBank(true), history: renderHistory };
+function setView(id) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + id));
+  document.querySelectorAll("#nav button").forEach((b) => (b.dataset.view === id ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
+  window.scrollTo(0, 0);
+}
+async function show(id) {
+  if (quiz && !quiz.finished && $("#view-quiz").classList.contains("active")) {
+    const ok = await ask("Une série est en cours. Tu pourras la reprendre depuis l'accueil.", [["Rester", false], ["Quitter la série", true]]);
+    if (!ok) return;
+    stopTimer();
+  }
+  setView(id);
+  RENDER[id]?.();
+}
+$("#nav").addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.view; if (v) show(v); });
+document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) show(g.dataset.goto); });
+
+// ======================================================================
+// Accueil
+// ======================================================================
+function renderHome() {
+  const exams = S.attempts.filter((a) => a.mode === "exam");
+  const last = exams[0];
+  const lastPct = last ? last.score / last.total : null;
+  $("#home-tiles").innerHTML = `
+    <div class="tile"><b>${fr(S.questions.length)}</b><span>questions dans ta banque</span></div>
+    <div class="tile"><b>${S.sources.length}</b><span>documents déposés</span></div>
+    <div class="tile"><b>${S.attempts.length}</b><span>séries terminées</span></div>
+    <div class="tile ${lastPct === null ? "" : lastPct >= 0.7 ? "good" : lastPct >= 0.5 ? "mid" : "bad"}"><b>${last ? note20(last.score, last.total) : "–"}</b><span>dernier examen blanc, sur 20</span></div>`;
+  $("#step-1").classList.toggle("done", S.sources.length > 0);
+  $("#step-2").classList.toggle("done", S.questions.some((q) => q.origin === "ia"));
+  $("#step-3").classList.toggle("done", S.attempts.some((a) => a.mode !== "exam"));
+  $("#step-4").classList.toggle("done", exams.length > 0);
+  $("#resume-box").classList.toggle("hidden", !(S.cur && S.cur.session));
+  const t = topicTable().filter((x) => x.seen > 0).sort((a, b) => a.rate - b.rate);
+  $("#home-topics").innerHTML = t.length
+    ? t.slice(0, 8).map((x) => bar(x.topic, x.rate, `${x.count} questions`)).join("")
+    : `<p class="hint">Réponds à quelques questions : tes thèmes les plus fragiles s'afficheront ici.</p>`;
+}
+function topicTable() {
+  const m = {};
+  for (const q of S.questions) {
+    const s = statOf(q.id);
+    const o = (m[q.topic] ||= { topic: q.topic, count: 0, seen: 0, wrong: 0 });
+    o.count++; o.seen += s[0]; o.wrong += s[1];
+  }
+  return Object.values(m).map((o) => ({ ...o, rate: o.seen ? Math.max(0, 1 - o.wrong / o.seen) : 1 })).sort((a, b) => b.count - a.count);
+}
+function bar(label, ratio, extra = "") {
+  const pct = Math.round(ratio * 100);
+  const cls = pct >= 70 ? "good" : pct >= 50 ? "mid" : "bad";
+  return `<div class="bar"><span class="bar-label">${esc(label)}<small>${esc(extra)}</small></span><div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div><span class="bar-val">${pct} %</span></div>`;
+}
+$("#resume-btn").addEventListener("click", () => { quiz = S.cur; openQuiz(); });
+$("#drop-cur-btn").addEventListener("click", async () => {
+  if (await ask("Abandonner la série en cours ? Les réponses déjà données ne seront pas comptées.", [["Non", false], ["Abandonner", true]])) { clearCur(); quiz = null; renderHome(); }
+});
+
+// ======================================================================
+// Documents
+// ======================================================================
+document.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener("change", () => {
+  $("#kind-hint").textContent = r.value === "quiz" && r.checked
+    ? "Les questions du quiz sont ajoutées telles quelles à ta banque. Si la bonne réponse n'est pas indiquée, Claude la trouve et la marque « à vérifier »."
+    : "Claude s'en servira pour créer de nouvelles questions.";
+}));
+const drop = $("#drop");
+let pickedFiles = [];
+["dragover", "dragenter"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove("over")));
+drop.addEventListener("drop", (e) => { e.preventDefault(); pickedFiles = [...e.dataTransfer.files]; showPicked(); });
+$("#file-input").addEventListener("change", (e) => { pickedFiles = [...e.target.files]; showPicked(); });
+function showPicked() { $("#drop-files").textContent = pickedFiles.length ? `Sélection : ${pickedFiles.map((f) => f.name).join(", ")}` : ""; }
+
+function logTo(el, msg, cls = "") { const d = document.createElement("div"); d.textContent = msg; if (cls) d.style.color = `var(--${cls})`; el.prepend(d); }
+
+$("#upload-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!ROOT) return toast("Tes données ne sont pas accessibles : ouvre la page depuis Claude, connecté à ton compte.", true);
+  const kind = document.querySelector('input[name="kind"]:checked').value;
+  const items = pickedFiles.map((f) => ({ name: f.name, file: f }));
+  const pasted = $("#paste-text").value.trim();
+  if (pasted) items.push({ name: $("#paste-name").value.trim() || "Texte collé", text: pasted });
+  if (!items.length) return toast("Choisis au moins un fichier ou colle du texte.", true);
+  const btn = $("#upload-btn"), status = $("#upload-status"), log = $("#upload-log");
+  btn.disabled = true;
+  for (const it of items) {
+    try {
+      status.textContent = `Lecture de « ${it.name} »…`;
+      const text = it.text ?? (await readFile(it.file, (p) => (status.textContent = `Lecture de « ${it.name} » : ${p}`)));
+      if (!text || text.trim().length < 20) throw new Error("aucun texte trouvé (PDF scanné ?)");
+      const sourceId = "s" + rid();
+      const chunks = chunkText(text);
+      status.textContent = `Enregistrement de « ${it.name} »…`;
+      for (let n = 0; n < chunks.length; n++) await write(col("chunks").doc(`${sourceId}-${n}`), "set", { sourceId, n, text: chunks[n] });
+      const src = { name: it.name, kind, chars: text.length, chunkCount: chunks.length, createdAt: Date.now() };
+      await write(col("sources").doc(sourceId), "set", src);
+      S.sources.push({ id: sourceId, ...src });
+      const parsed = parseQuizText(text, it.name.replace(/\.[^.]+$/, ""));
+      let added = parsed.length ? await addQuestions(parsed, sourceId, "quiz") : 0;
+      let msg = `✔ ${it.name} : ${fr(Math.round(text.length / 1000))} k caractères`;
+      if (added) msg += `, ${added} questions de quiz ajoutées`;
+      logTo(log, msg, "good");
+      if (kind === "quiz" && !parsed.length) {
+        logTo(log, `Claude lit les questions de « ${it.name} »…`);
+        added = await extractQuiz(sourceId, it.name, chunks, (m) => (status.textContent = m));
+        logTo(log, `✔ ${added} questions récupérées dans « ${it.name} »`, "good");
+      }
+    } catch (err) {
+      logTo(log, `✘ ${it.name} : ${err.message || SAMPLE_ERRORS[err.code] || err.code}`, "bad");
+    }
+  }
+  status.textContent = "";
+  btn.disabled = false;
+  pickedFiles = []; showPicked(); $("#file-input").value = ""; $("#paste-text").value = ""; $("#paste-name").value = "";
+  renderSources();
+});
+
+async function extractQuiz(sourceId, name, chunks, onStatus) {
+  if (!SAMPLE) throw new Error("Claude n'est pas disponible dans cette vue : le quiz n'a pas pu être lu.");
+  let total = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    onStatus?.(`Claude lit le quiz « ${name} » : partie ${i + 1} / ${chunks.length}`);
+    try {
+      const data = await SAMPLE.json(extractionPrompt(chunks[i], name), { cache: false });
+      total += await addQuestions(Array.isArray(data?.questions) ? data.questions : [], sourceId, "quiz");
+    } catch (e) {
+      if (FATAL.has(e.code)) throw { code: e.code, message: SAMPLE_ERRORS[e.code] || e.message };
+    }
+  }
+  return total;
+}
+
+function renderSources() {
+  const list = $("#sources-list");
+  if (!S.sources.length) { list.innerHTML = `<div class="hint">Aucun document pour l'instant. Commence par le PDF de ton cours.</div>`; return; }
+  list.innerHTML = S.sources.map((s) => {
+    const n = S.questions.filter((q) => q.sourceId === s.id).length;
+    return `<div><span class="grow"><strong>${esc(s.name)}</strong><small>${s.kind === "quiz" ? "Quiz" : "Cours"} · ${fr(Math.round(s.chars / 1000))} k caractères · ${fr(n)} questions</small></span>
+      ${s.kind === "quiz" ? `<button type="button" class="small" data-reextract="${s.id}">Relire avec Claude</button>` : ""}
+      <button type="button" class="small" data-delsrc="${s.id}">Supprimer</button></div>`;
+  }).join("");
+}
+$("#sources-list").addEventListener("click", async (e) => {
+  const del = e.target.dataset.delsrc, re = e.target.dataset.reextract;
+  if (re) {
+    const s = S.sources.find((x) => x.id === re);
+    e.target.disabled = true;
+    try {
+      const added = await extractQuiz(re, s.name, (await chunksOf(re)).map((c) => c.text), (m) => (e.target.textContent = m.split(":").pop().trim()));
+      toast(`${added} nouvelles questions récupérées.`);
+    } catch (err) { toast(err.message || err.code, true); }
+    renderSources();
+    return;
+  }
+  if (!del) return;
+  const s = S.sources.find((x) => x.id === del);
+  const choice = await ask(`Supprimer « ${s.name} » ?`, [["Annuler", null], ["Garder ses questions", "keep"], ["Supprimer aussi ses questions", "all"]]);
+  if (!choice) return;
+  for (let n = 0; n < (s.chunkCount || 0); n++) await write(col("chunks").doc(`${del}-${n}`), "delete").catch(() => {});
+  await write(col("sources").doc(del), "delete");
+  S.sources = S.sources.filter((x) => x.id !== del);
+  if (choice === "all") {
+    for (const b of [...S.batches.values()].filter((b) => b.sourceId === del)) { await write(col("qbatches").doc(b.id), "delete"); S.batches.delete(b.id); }
+    reindex();
+  }
+  renderSources();
+});
+
+// ======================================================================
+// Génération
+// ======================================================================
+let genCtl = null;
+function renderGenerate() {
+  const courses = S.sources;
+  $("#gen-sources").innerHTML = courses.length
+    ? courses.map((s) => `<label><input type="checkbox" name="gsrc" value="${s.id}" ${s.kind !== "quiz" ? "checked" : ""}> ${esc(s.name)}</label>`).join("")
+    : `<span class="hint">Dépose d'abord tes documents dans « Mes documents ».</span>`;
+  $("#gen-btn").disabled = !courses.length || !SAMPLE || !!genCtl;
+  if (!SAMPLE) $("#gen-btn").title = "Claude n'est pas disponible dans cette vue";
+}
+
+$("#gen-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const ids = [...document.querySelectorAll('input[name="gsrc"]:checked')].map((c) => c.value);
+  if (!ids.length) return toast("Coche au moins un document.", true);
+  const target = Math.max(1, Math.min(3000, Number($("#gen-count").value) || 100));
+  const tier = $("#gen-tier").value;
+  const focus = $("#gen-focus").value.trim();
+  const log = $("#gen-log");
+  log.innerHTML = "";
+  $("#gen-progress").classList.remove("hidden");
+  $("#gen-btn").disabled = true;
+  $("#gen-stop").classList.remove("hidden");
+  genCtl = new AbortController();
+  const setStatus = (done, msg, pill = "En cours") => {
+    $("#gen-status").textContent = `${fr(done)} / ${fr(target)} questions créées`;
+    $("#gen-bar").style.width = Math.min(100, (done / target) * 100) + "%";
+    const p = $("#gen-pill"); p.textContent = pill; p.className = "pill " + (pill === "En cours" ? "amber" : pill === "Terminé" ? "good" : "bad");
+    if (msg) logTo(log, msg);
+  };
+  let done = 0, fails = 0, poor = 0, round = 0, end = "Terminé";
+  try {
+    setStatus(0, "Lecture des documents…");
+    const parts = [];
+    for (const id of ids) {
+      const s = S.sources.find((x) => x.id === id);
+      (await chunksOf(id)).forEach((c) => parts.push({ sourceId: id, name: s.name, text: c.text, n: c.n }));
+    }
+    if (!parts.length) throw new Error("Ces documents ne contiennent pas de texte.");
+    const order = shuffle(parts);
+    while (done < target && !genCtl.signal.aborted) {
+      const part = order[round % order.length];
+      const angle = ANGLES[(round + Math.floor(round / order.length)) % ANGLES.length];
+      round++;
+      const want = Math.min(20, target - done);
+      const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
+      setStatus(done, `Lot ${round} : ${part.name}, partie ${part.n + 1} (${angle.split(" (")[0]})…`);
+      try {
+        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing), { signal: genCtl.signal, modelTier: tier, cache: false });
+        const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4);
+        const added = await addQuestions(list, part.sourceId, "ia");
+        done += added;
+        fails = 0;
+        poor = added < 3 ? poor + 1 : 0;
+        setStatus(done, `✔ ${added} questions ajoutées`);
+        if (poor >= 8) { end = "Terminé"; logTo(log, "Tes documents semblent épuisés : ajoute d'autres cours pour obtenir des questions nouvelles."); break; }
+      } catch (err) {
+        if (FATAL.has(err.code)) { if (err.code !== "cancelled") { end = "Interrompu"; logTo(log, SAMPLE_ERRORS[err.code] || err.message, "bad"); } else end = "Arrêté"; break; }
+        fails++;
+        logTo(log, `✘ ${SAMPLE_ERRORS[err.code] || err.message || "Erreur"} On passe au lot suivant.`, "bad");
+        if (fails >= 3) { end = "Interrompu"; logTo(log, "Trois lots ont échoué de suite : génération arrêtée. Réessaie plus tard.", "bad"); break; }
+      }
+    }
+    if (genCtl.signal.aborted) end = "Arrêté";
+  } catch (err) {
+    end = "Interrompu";
+    logTo(log, err.message || String(err), "bad");
+  }
+  setStatus(done, end === "Terminé" ? `Fini : ${fr(done)} nouvelles questions dans ta banque.` : null, end);
+  genCtl = null;
+  $("#gen-stop").classList.add("hidden");
+  renderGenerate();
+});
+$("#gen-stop").addEventListener("click", () => genCtl?.abort());
+
+// ======================================================================
+// Séries : entraînement, révision, examen
+// ======================================================================
+function renderPractice() {
+  const t = topicTable();
+  $("#pr-topics").innerHTML = t.length
+    ? t.map((x) => `<label><input type="checkbox" name="ptopic" value="${esc(x.topic)}"> ${esc(x.topic)} <small>(${x.count})</small></label>`).join("")
+    : `<span class="hint">Ta banque est vide.</span>`;
+}
+function pickStratified(pool, count) {
+  if (pool.length <= count) return shuffle(pool);
+  const by = new Map();
+  for (const q of shuffle(pool)) { if (!by.has(q.topic)) by.set(q.topic, []); by.get(q.topic).push(q); }
+  for (const l of by.values()) l.sort((a, b) => statOf(a.id)[0] - statOf(b.id)[0]);
+  const picked = [];
+  for (const l of by.values()) picked.push(...l.splice(0, Math.max(1, Math.round((l.length / pool.length) * count))));
+  const rest = shuffle([...by.values()].flat());
+  while (picked.length < count && rest.length) picked.push(rest.pop());
+  return shuffle(picked.slice(0, count));
+}
+function buildSession(mode, count, topics = [], durationMin = 180) {
+  let pool = S.questions;
+  if (topics.length) pool = pool.filter((q) => topics.includes(q.topic));
+  if (mode === "review") {
+    pool = pool.filter((q) => statOf(q.id)[1] > 0);
+    if (!pool.length) throw new Error("Aucune erreur à réviser pour l'instant : fais d'abord un entraînement ou un examen blanc.");
+  }
+  if (!pool.length) throw new Error("Ta banque n'a pas encore de questions. Dépose tes documents puis crée des questions.");
+  const chosen = mode === "review"
+    ? shuffle([...pool].sort((a, b) => statOf(b.id)[1] / Math.max(1, statOf(b.id)[0]) - statOf(a.id)[1] / Math.max(1, statOf(a.id)[0])).slice(0, count))
+    : pickStratified(pool, count);
+  return {
+    id: "a" + rid(), mode, startedAt: Date.now(),
+    durationSec: mode === "exam" ? Math.round(durationMin * 60) : null,
+    items: chosen.map((q) => ({ q: q.id, o: shuffle(q.choices.map((_, i) => i)) })),
+  };
+}
+
+let quiz = null, timerH = null;
+function startQuiz(mode, count, topics, durationMin) {
+  try {
+    const session = buildSession(mode, count, topics, durationMin);
+    if (session.items.length < count) toast(`Ta banque ne contient que ${session.items.length} questions pour cette sélection.`);
+    quiz = { session, idx: 0, answers: {}, flags: {}, feedback: {}, finished: false };
+    S.cur = quiz;
+    saveCur();
+    openQuiz();
+  } catch (e) { toast(e.message, true); }
+}
+$("#practice-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  startQuiz(document.querySelector('input[name="pmode"]:checked').value, Number($("#pr-count").value) || 20, [...document.querySelectorAll('input[name="ptopic"]:checked')].map((c) => c.value));
+});
+$("#exam-form").addEventListener("submit", (e) => { e.preventDefault(); startQuiz("exam", Number($("#ex-count").value) || 80, [], Number($("#ex-min").value) || 180); });
+$("#exam-form").addEventListener("input", () => {
+  const per = ((Number($("#ex-min").value) || 0) * 60) / Math.max(1, Number($("#ex-count").value) || 1);
+  $("#ex-pace").textContent = `Soit ${Math.floor(per / 60)} min ${Math.round(per % 60)} s par question.`;
+});
+
+function openQuiz() {
+  quiz.feedback ||= {};
+  const exam = quiz.session.mode === "exam";
+  $("#quiz-timer").classList.toggle("hidden", !exam);
+  $("#quiz-grid").classList.toggle("hidden", !exam);
+  stopTimer();
+  if (exam) { timerH = setInterval(tick, 1000); tick(); }
+  setView("quiz");
+  document.querySelectorAll("#nav button").forEach((b) => b.removeAttribute("aria-current"));
+  renderQuestion();
+}
+function stopTimer() { clearInterval(timerH); timerH = null; }
+function tick() {
+  const left = quiz.session.durationSec - Math.floor((Date.now() - quiz.session.startedAt) / 1000);
+  if (left <= 0) { stopTimer(); toast("Temps écoulé : ta copie est corrigée."); finishQuiz(); return; }
+  const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+  $("#quiz-timer").textContent = `${h} h ${String(m).padStart(2, "0")} min ${String(s).padStart(2, "0")} s`;
+  $("#quiz-timer").classList.toggle("urgent", left < 600);
+}
+const itemQ = (it) => S.qById.get(it.q);
+
+function renderQuestion() {
+  const { session, idx } = quiz;
+  const it = session.items[idx];
+  const q = itemQ(it);
+  const exam = session.mode === "exam";
+  const answered = Object.keys(quiz.answers).length;
+  $("#quiz-label").textContent = `${MODE_LABEL[session.mode]} · question ${idx + 1} sur ${session.items.length} · ${answered} répondue${answered > 1 ? "s" : ""}`;
+  $("#quiz-bar").style.width = (answered / session.items.length) * 100 + "%";
+  if (!q) {
+    $("#q-meta").innerHTML = ""; $("#q-text").textContent = "Cette question a été supprimée de ta banque."; $("#q-choices").innerHTML = ""; $("#q-feedback").className = "feedback hidden";
+  } else {
+    $("#q-meta").innerHTML = `<span class="pill">${esc(q.topic)}</span><span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}`;
+    $("#q-text").textContent = q.question;
+    const fb = quiz.feedback[it.q];
+    const chosen = quiz.answers[it.q];
+    $("#q-choices").innerHTML = it.o.map((orig, i) => {
+      let cls = "choice";
+      if (chosen === i) cls += " selected";
+      if (fb) cls += i === fb.right ? " right" : chosen === i ? " wrong" : "";
+      return `<button type="button" class="${cls}" data-i="${i}" ${fb ? "disabled" : ""}><span class="key">${LETTERS[i]}</span><span>${esc(q.choices[orig])}</span></button>`;
+    }).join("");
+    const box = $("#q-feedback");
+    if (fb) {
+      box.className = "feedback " + (fb.ok ? "good" : "bad");
+      box.innerHTML = `<strong>${fb.ok ? "Bonne réponse" : `Raté : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${q.explanation ? `<span>${esc(q.explanation)}</span>` : ""}${q.guessed ? '<small>Réponse proposée par Claude, à vérifier avec ton cours.</small>' : ""}`;
+    } else box.className = "feedback hidden";
+  }
+  $("#q-flag").checked = !!quiz.flags[it.q];
+  $("#q-prev").disabled = idx === 0;
+  $("#q-next").textContent = idx === session.items.length - 1 ? (exam ? "Rendre ma copie" : "Voir le bilan") : "Suivante →";
+  if (exam) $("#quiz-grid").innerHTML = session.items.map((x, i) => `<button type="button" data-go="${i}" class="${i === idx ? "current" : ""} ${x.q in quiz.answers ? "done" : ""} ${quiz.flags[x.q] ? "flagged" : ""}" aria-label="Question ${i + 1}">${i + 1}</button>`).join("");
+}
+
+$("#q-choices").addEventListener("click", (e) => {
+  const b = e.target.closest(".choice");
+  if (!b || b.disabled) return;
+  const it = quiz.session.items[quiz.idx];
+  const i = Number(b.dataset.i);
+  quiz.answers[it.q] = i;
+  if (quiz.session.mode !== "exam") {
+    const q = itemQ(it);
+    const right = it.o.indexOf(q.answer);
+    quiz.feedback[it.q] = { ok: i === right, right };
+    record(it.q, i === right);
+  }
+  saveCur();
+  renderQuestion();
+});
+$("#quiz-grid").addEventListener("click", (e) => { if (e.target.dataset.go !== undefined) { quiz.idx = Number(e.target.dataset.go); saveCur(); renderQuestion(); } });
+$("#q-flag").addEventListener("change", (e) => { quiz.flags[quiz.session.items[quiz.idx].q] = e.target.checked; saveCur(); renderQuestion(); });
+$("#q-prev").addEventListener("click", () => { quiz.idx = Math.max(0, quiz.idx - 1); saveCur(); renderQuestion(); });
+$("#q-next").addEventListener("click", async () => {
+  if (quiz.idx < quiz.session.items.length - 1) { quiz.idx++; saveCur(); renderQuestion(); return; }
+  if (quiz.session.mode === "exam") {
+    const missing = quiz.session.items.length - Object.keys(quiz.answers).length;
+    if (!(await ask(missing ? `Il reste ${missing} question${missing > 1 ? "s" : ""} sans réponse. Rendre ta copie quand même ?` : "Rendre ta copie ?", [["Continuer", false], ["Rendre ma copie", true]]))) return;
+  }
+  finishQuiz();
+});
+$("#quiz-end").addEventListener("click", async () => {
+  if (await ask("Terminer la série maintenant et voir la correction ?", [["Continuer", false], ["Terminer", true]])) finishQuiz();
+});
+document.addEventListener("keydown", (e) => {
+  if (!$("#view-quiz").classList.contains("active") || e.target.matches("input, textarea, select") || $("#dlg").open) return;
+  const k = "abcdefgh".indexOf(e.key.toLowerCase());
+  if (k >= 0) $(`#q-choices .choice[data-i="${k}"]`)?.click();
+  else if (e.key === "ArrowRight") $("#q-next").click();
+  else if (e.key === "ArrowLeft") $("#q-prev").click();
+});
+
+async function finishQuiz() {
+  stopTimer();
+  const s = quiz.session;
+  const items = s.items.map((it) => ({ q: it.q, o: it.o, a: it.q in quiz.answers ? quiz.answers[it.q] : null }));
+  let score = 0;
+  for (const it of items) {
+    const q = S.qById.get(it.q);
+    if (!q) continue;
+    const ok = it.a === it.o.indexOf(q.answer);
+    if (ok) score++;
+    if (s.mode === "exam") record(it.q, ok);
+  }
+  const attempt = { mode: s.mode, startedAt: s.startedAt, finishedAt: Date.now(), durationSec: s.durationSec, score, total: items.length, items, flags: Object.keys(quiz.flags).filter((k) => quiz.flags[k]) };
+  quiz.finished = true;
+  clearCur();
+  S.attempts.unshift({ id: s.id, ...attempt });
+  write(col("attempts").doc(s.id), "set", attempt).catch(() => {});
+  flushStats();
+  renderResult({ id: s.id, ...attempt });
+}
+
+function renderResult(a) {
+  const details = a.items.map((it) => {
+    const q = S.qById.get(it.q);
+    return q ? { q, it, right: it.o.indexOf(q.answer), ok: it.a === it.o.indexOf(q.answer) } : null;
+  }).filter(Boolean);
+  const byTopic = {};
+  for (const d of details) { const o = (byTopic[d.q.topic] ||= { total: 0, ok: 0 }); o.total++; if (d.ok) o.ok++; }
+  const pct = a.total ? a.score / a.total : 0;
+  const minutes = Math.round((a.finishedAt - a.startedAt) / 60000);
+  const flags = new Set(a.flags || []);
+  const wrongCount = details.filter((d) => !d.ok).length;
+  const v = $("#view-result");
+  v.innerHTML = `
+    <h1>${MODE_LABEL[a.mode]} terminé</h1>
+    <div class="tiles">
+      <div class="tile ${pct >= 0.7 ? "good" : pct >= 0.5 ? "mid" : "bad"}"><b>${note20(a.score, a.total)} / 20</b><span>${a.score} bonnes réponses sur ${a.total}</span></div>
+      <div class="tile"><b>${minutes} min</b><span>temps passé</span></div>
+      <div class="tile"><b>${wrongCount}</b><span>erreurs ou sans réponse</span></div>
+    </div>
+    <h2>Par thème</h2>
+    <div class="bars">${Object.entries(byTopic).sort((x, y) => x[1].ok / x[1].total - y[1].ok / y[1].total).map(([t, o]) => bar(t, o.ok / o.total, `${o.ok} sur ${o.total}`)).join("")}</div>
+    <div class="row">${wrongCount ? '<button type="button" class="primary" id="res-review">Réviser mes erreurs</button>' : ""}<button type="button" data-goto="home">Retour à l'accueil</button></div>
+    <div class="row between"><h2>Correction</h2><label class="flag" for="only-wrong"><input type="checkbox" id="only-wrong" checked> Seulement les erreurs</label></div>
+    <div class="stack" id="corrs">${details.map((d, i) => `
+      <div class="panel corr ${d.ok ? "ok" : "wrong"}">
+        <div class="qhead"><strong>Q${i + 1}</strong><span class="pill">${esc(d.q.topic)}</span>${flags.has(d.q.id) ? '<span class="pill amber">à revoir</span>' : ""}<span class="pill ${d.ok ? "good" : "bad"} push">${d.ok ? "Juste" : d.it.a === null ? "Sans réponse" : "Faux"}</span></div>
+        <p><strong>${esc(d.q.question)}</strong></p>
+        <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(d.q.choices[orig])}</span></li>`).join("")}</ul>
+        ${d.q.explanation ? `<p class="expl">${esc(d.q.explanation)}</p>` : ""}
+      </div>`).join("")}</div>`;
+  setView("result");
+  document.querySelectorAll("#nav button").forEach((b) => b.removeAttribute("aria-current"));
+  const toggle = () => v.querySelectorAll(".corr.ok").forEach((el) => el.classList.toggle("hidden", $("#only-wrong").checked));
+  $("#only-wrong").onchange = toggle;
+  toggle();
+  const rb = $("#res-review");
+  if (rb) rb.onclick = () => startQuiz("review", Math.min(20, wrongCount), []);
+}
+
+// ======================================================================
+// Banque de questions
+// ======================================================================
+let bankShown = 0;
+function bankFiltered() {
+  const term = stemKey($("#bank-search").value);
+  const topic = $("#bank-topic").value, f = $("#bank-filter").value;
+  return S.questions.filter((q) =>
+    (!topic || q.topic === topic) &&
+    (!term || stemKey(q.question).includes(term)) &&
+    (f !== "wrong" || statOf(q.id)[1] > 0) &&
+    (f !== "guessed" || q.guessed));
+}
+function renderBank(reset) {
+  if (reset) {
+    bankShown = 0;
+    const cur = $("#bank-topic").value;
+    $("#bank-topic").innerHTML = `<option value="">Tous les thèmes</option>` + topicTable().map((t) => `<option ${t.topic === cur ? "selected" : ""}>${esc(t.topic)}</option>`).join("");
+    $("#bank-list").innerHTML = "";
+  }
+  const list = bankFiltered();
+  $("#bank-count").textContent = `${fr(list.length)} question${list.length > 1 ? "s" : ""}`;
+  const page = list.slice(bankShown, bankShown + 40);
+  $("#bank-list").insertAdjacentHTML("beforeend", page.map((q) => {
+    const s = statOf(q.id);
+    return `<div class="panel" data-q="${q.id}">
+      <div class="qhead"><span class="pill">${esc(q.topic)}</span><span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}
+        ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
+      <p><strong>${esc(q.question)}</strong></p>
+      <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
+      ${q.explanation ? `<p class="expl">${esc(q.explanation)}</p>` : ""}</div>`;
+  }).join(""));
+  bankShown += page.length;
+  $("#bank-more").classList.toggle("hidden", bankShown >= list.length);
+  if (!list.length) $("#bank-list").innerHTML = `<p class="hint">Aucune question ici pour l'instant.</p>`;
+}
+let bankT;
+$("#bank-search").addEventListener("input", () => { clearTimeout(bankT); bankT = setTimeout(() => renderBank(true), 250); });
+$("#bank-topic").addEventListener("change", () => renderBank(true));
+$("#bank-filter").addEventListener("change", () => renderBank(true));
+$("#bank-more").addEventListener("click", () => renderBank(false));
+$("#bank-list").addEventListener("click", async (e) => {
+  const id = e.target.dataset.delq;
+  if (!id || !(await ask("Supprimer cette question de ta banque ?", [["Annuler", false], ["Supprimer", true]]))) return;
+  await deleteQuestion(id);
+  e.target.closest("[data-q]").remove();
+  $("#bank-count").textContent = `${fr(bankFiltered().length)} questions`;
+});
+
+// ======================================================================
+// Résultats
+// ======================================================================
+function renderHistory() {
+  $("#history").innerHTML = S.attempts.length
+    ? S.attempts.map((a) => `<div><span class="grow"><strong>${MODE_LABEL[a.mode]} · ${note20(a.score, a.total)} / 20</strong><small>${new Date(a.startedAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })} · ${a.score} sur ${a.total} · ${Math.round((a.finishedAt - a.startedAt) / 60000)} min</small></span><button type="button" class="small" data-open="${a.id}">Revoir la correction</button></div>`).join("")
+    : `<div class="hint">Aucune série terminée pour l'instant.</div>`;
+}
+$("#history").addEventListener("click", (e) => { const id = e.target.dataset.open; if (id) renderResult(S.attempts.find((a) => a.id === id)); });
+
+// ======================================================================
+// Démarrage
+// ======================================================================
+(async function boot() {
+  const msg = $("#boot-msg");
+  try {
+    if (!window.claude?.use) throw { message: "Cette page doit être ouverte depuis Claude." };
+    const [db, user, sample] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("sample")]);
+    SAMPLE = sample;
+    const uid = user ? await user.id() : null;
+    if (!db || !uid) {
+      msg.className = "notice bad";
+      msg.innerHTML = "<strong>Tes données ne sont pas accessibles.</strong><span>Ouvre cette page dans Claude en étant connecté à ton compte : c'est là que tes documents et tes questions sont enregistrés.</span>";
+      return;
+    }
+    DB = db;
+    ROOT = db.doc(`data/users/${uid}/app`);
+    await loadAll();
+    msg.remove();
+    if (!SAMPLE) {
+      const n = document.createElement("div");
+      n.className = "notice";
+      n.textContent = "Claude n'est pas disponible dans cette vue : tu peux t'entraîner sur ta banque, mais pas créer de nouvelles questions.";
+      $("#view-home").prepend(n);
+    }
+  } catch (e) {
+    msg.className = "notice bad";
+    msg.innerHTML = `<strong>Impossible de charger tes données.</strong><span>${esc(e?.message || e?.code || e)} Recharge la page dans un moment.</span>`;
+    return;
+  }
+  renderHome();
+})();
+</script>
+</body>
+</html>

@@ -1,5 +1,9 @@
 # 📦 Quiz Supply Chain : préparation à l'examen
 
+> **Le plus simple :** utilise la version en ligne, qui s'ouvre dans Claude sans rien installer :
+> <https://claude.ai/artifact/8Kcqc6xvkrSyykB4iZTSLD>. Son code est dans `claude-page/index.html`.
+> Le reste de ce dossier est la version à installer soi-même sur un ordinateur.
+
 Une application web pour réviser un examen de supply chain de **80 QCM en 3 heures** :
 
 1. **Mes supports** : dépose tes cours et tes anciens quiz (PDF, Word `.docx`, TXT, Markdown, CSV, JSON).
