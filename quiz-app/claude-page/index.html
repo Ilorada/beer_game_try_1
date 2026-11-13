@@ -6,204 +6,314 @@
 <title>Quiz Supply Chain</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* Layout : barre d'onglets fixe en haut, une colonne de 920px max ; le quiz occupe tout l'écran utile. */
+/* Layout : en-tête turquoise avec onglets (barre d'onglets en bas sur téléphone), colonne de 980px,
+   cartes colorées par rôle : turquoise = action, orange = élan/série, jaune = objectif, violet = examen. */
 :root {
-  --bg: #f3f5f7;
+  --bg: #eef6f5;
   --surface: #ffffff;
-  --ink: #17212b;
-  --muted: #5d6b78;
-  --line: #dde3e9;
-  --accent: #1d6a86;
-  --accent-ink: #ffffff;
-  --accent-soft: #e2f0f5;
-  --amber: #c27a0e;
-  --amber-soft: #fbf1df;
-  --good: #1c8a4c;
-  --good-soft: #e3f4ea;
-  --bad: #c43a31;
-  --bad-soft: #fbe7e5;
-  --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
-  --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --radius: 10px;
+  --ink: #15302e;
+  --muted: #5a7471;
+  --line: #d5e4e2;
+  --teal: #0e9f8e;
+  --teal-deep: #0a7266;
+  --teal-soft: #d9f3ef;
+  --orange: #ff7a45;
+  --orange-soft: #ffe8dd;
+  --sun: #f5b400;
+  --sun-soft: #fff4cc;
+  --violet: #6c5ce7;
+  --violet-soft: #ebe8ff;
+  --pink: #ef4f86;
+  --pink-soft: #fde3ee;
+  --good: #16a35a;
+  --good-soft: #dcf6e7;
+  --bad: #e5484d;
+  --bad-soft: #fde4e4;
+  --on-color: #ffffff;
+  --shadow: 0 2px 0 rgba(21, 48, 46, .06), 0 8px 24px -12px rgba(21, 48, 46, .25);
+  --font-display: "Fredoka", "Nunito", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 18px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #11171d; --surface: #19222a; --ink: #e6ecf1; --muted: #93a2af; --line: #2a3640;
-    --accent: #5cb3d1; --accent-ink: #0d1a20; --accent-soft: #1b3440;
-    --amber: #e3a34a; --amber-soft: #3a2c16; --good: #57c486; --good-soft: #173527; --bad: #ef7a70; --bad-soft: #3d1f1d;
+    --bg: #0f1d1c; --surface: #172928; --ink: #e5f3f1; --muted: #92b0ac; --line: #26403e;
+    --teal: #2cc6b2; --teal-deep: #7de0d2; --teal-soft: #163b37;
+    --orange: #ff9466; --orange-soft: #3d2519; --sun: #ffcf4a; --sun-soft: #3a3214;
+    --violet: #9d91ff; --violet-soft: #26224a; --pink: #ff7aa6; --pink-soft: #3d1a2a;
+    --good: #4cd68a; --good-soft: #143425; --bad: #ff7a7e; --bad-soft: #3d1b1c; --on-color: #0f1d1c;
+    --shadow: 0 8px 24px -12px rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #11171d; --surface: #19222a; --ink: #e6ecf1; --muted: #93a2af; --line: #2a3640;
-  --accent: #5cb3d1; --accent-ink: #0d1a20; --accent-soft: #1b3440;
-  --amber: #e3a34a; --amber-soft: #3a2c16; --good: #57c486; --good-soft: #173527; --bad: #ef7a70; --bad-soft: #3d1f1d;
+  --bg: #0f1d1c; --surface: #172928; --ink: #e5f3f1; --muted: #92b0ac; --line: #26403e;
+  --teal: #2cc6b2; --teal-deep: #7de0d2; --teal-soft: #163b37;
+  --orange: #ff9466; --orange-soft: #3d2519; --sun: #ffcf4a; --sun-soft: #3a3214;
+  --violet: #9d91ff; --violet-soft: #26224a; --pink: #ff7aa6; --pink-soft: #3d1a2a;
+  --good: #4cd68a; --good-soft: #143425; --bad: #ff7a7e; --bad-soft: #3d1b1c; --on-color: #0f1d1c;
+  --shadow: 0 8px 24px -12px rgba(0, 0, 0, .6);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 17px/1.5 var(--font-body); }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.15; text-wrap: balance; margin: 0; }
-h1 { font-size: 34px; letter-spacing: -0.01em; }
-h2 { font-size: 24px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: 34px; }
+h2 { font-size: 23px; }
 h3 { font-size: 19px; }
 p { margin: 0; }
 small, .hint { color: var(--muted); font-size: 15px; }
 .hidden { display: none !important; }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-header { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
-.head-in { max-width: 960px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
-.brand { font-family: var(--font-display); font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.brand svg { width: 26px; height: 26px; }
-nav { display: flex; flex-wrap: wrap; gap: 2px; }
-nav button { border: 0; background: none; padding: 7px 11px; border-radius: 7px; color: var(--muted); font: 600 15px var(--font-body); cursor: pointer; }
-nav button:hover { background: var(--bg); color: var(--ink); }
-nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+/* En-tête et navigation */
+header { position: sticky; top: 0; z-index: 20; background: var(--teal); color: var(--on-color); box-shadow: var(--shadow); }
+.head-in { max-width: 1010px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+.brand { font: 600 22px var(--font-display); display: flex; align-items: center; gap: 10px; color: #fff; }
+.brand svg { width: 34px; height: 34px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px; }
+nav button { border: 0; background: none; padding: 7px 12px; border-radius: 99px; color: rgba(255,255,255,.85); font: 700 15px var(--font-body); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+nav button svg { width: 18px; height: 18px; }
+nav button:hover { background: rgba(255,255,255,.15); color: #fff; }
+nav button[aria-current="page"] { background: #fff; color: var(--teal-deep); }
+:root[data-theme="dark"] nav button[aria-current="page"] { background: var(--surface); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) nav button[aria-current="page"] { background: var(--surface); } }
 
-main { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+main { max-width: 1010px; margin: 0 auto; padding: 22px 16px 90px; }
 .view { display: none; flex-direction: column; gap: 18px; }
-.view.active { display: flex; }
+.view.active { display: flex; animation: rise .25s ease-out; }
+@keyframes rise { from { transform: translateY(6px); opacity: .6; } to { transform: none; opacity: 1; } }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .row.between { justify-content: space-between; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-.lead { font-size: 19px; color: var(--muted); max-width: 65ch; }
-.notice { border-left: 4px solid var(--amber); background: var(--amber-soft); padding: 12px 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
-.notice.bad { border-color: var(--bad); background: var(--bad-soft); }
+.panel { background: var(--surface); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+.lead { font-size: 18px; color: var(--muted); max-width: 65ch; }
+.notice { border-radius: 14px; background: var(--sun-soft); padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.notice.bad { background: var(--bad-soft); }
+.page-title { display: flex; align-items: center; gap: 12px; }
+.page-title .ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; flex: none; }
+.page-title .ico svg { width: 26px; height: 26px; }
+
+/* Accueil */
+.hero { background: linear-gradient(135deg, var(--teal) 0%, var(--teal-deep) 100%); color: #fff; border-radius: 24px; padding: 22px; display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: rgba(255,255,255,.08); }
+.hero h1 { color: #fff; }
+.hero p { color: rgba(255,255,255,.9); }
+.hero .cta { grid-column: 1; display: flex; flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
+.hero .cta button { background: #fff; color: var(--teal-deep); border: 0; }
+.hero .cta button.alt { background: rgba(255,255,255,.18); color: #fff; }
+.ring { position: relative; width: 132px; height: 132px; z-index: 1; grid-column: 2; grid-row: 1 / span 2; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .ring-txt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1; }
+.ring b { font: 600 30px var(--font-display); }
+.ring small { color: rgba(255,255,255,.85); font-size: 13px; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
-.tile b { font-family: var(--font-display); font-size: 34px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tile { border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; box-shadow: var(--shadow); background: var(--surface); border-top: 5px solid var(--c, var(--teal)); }
+.tile .t-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--cs, var(--teal-soft)); color: var(--c, var(--teal)); margin-bottom: 4px; }
+.tile .t-ico svg { width: 20px; height: 20px; }
+.tile b { font: 600 32px var(--font-display); font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--c, var(--ink)); }
 .tile span { color: var(--muted); font-size: 15px; }
-.tile.good b { color: var(--good); } .tile.mid b { color: var(--amber); } .tile.bad b { color: var(--bad); }
+.c-teal { --c: var(--teal); --cs: var(--teal-soft); }
+.c-orange { --c: var(--orange); --cs: var(--orange-soft); }
+.c-sun { --c: var(--sun); --cs: var(--sun-soft); }
+.c-violet { --c: var(--violet); --cs: var(--violet-soft); }
+.c-pink { --c: var(--pink); --cs: var(--pink-soft); }
+.c-good { --c: var(--good); --cs: var(--good-soft); }
+.c-bad { --c: var(--bad); --cs: var(--bad-soft); }
 
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; counter-reset: s; }
-.steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 4px; }
-.steps li::before { content: "Étape " counter(s); font: 700 13px var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
-.steps li.done { border-color: var(--good); }
-.steps li.done::before { content: "Étape " counter(s) " · fait"; color: var(--good); }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; background: var(--surface); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow); }
+.steps li::before { content: counter(s); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 600 16px var(--font-display); background: var(--cs); color: var(--c); }
+.steps li.done::before { content: "✓"; background: var(--good); color: var(--on-color); }
+.steps li button.link { align-self: flex-start; }
 
-label.field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 15px; flex: 1 1 200px; }
-input[type=text], input[type=number], input[type=search], select, textarea {
-  width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: 400 16px var(--font-body); background: var(--surface); color: var(--ink);
+/* Formulaires et boutons */
+label.field { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 15px; flex: 1 1 200px; }
+input[type=text], input[type=number], input[type=search], input[type=date], select, textarea {
+  width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; font: 400 16px var(--font-body); background: var(--surface); color: var(--ink);
 }
+input:focus, select:focus, textarea:focus { border-color: var(--teal); outline: none; }
 textarea { resize: vertical; }
-fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0; padding: 10px 12px; }
-legend { font-weight: 600; font-size: 15px; padding: 0 4px; }
-.checks { display: flex; flex-wrap: wrap; gap: 6px 18px; max-height: 260px; overflow: auto; }
-.checks label { display: flex; gap: 6px; align-items: center; font-size: 16px; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg label { padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 15px; display: flex; gap: 6px; align-items: center; }
-.seg label:has(input:checked) { background: var(--accent-soft); color: var(--accent); }
-.seg input { accent-color: var(--accent); }
+fieldset { border: 2px solid var(--line); border-radius: 14px; margin: 0; padding: 10px 14px; }
+legend { font-weight: 800; font-size: 15px; padding: 0 4px; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px; max-height: 280px; overflow: auto; }
+.checks label { display: flex; gap: 6px; align-items: center; font-size: 15px; font-weight: 600; padding: 5px 12px 5px 8px; border-radius: 99px; background: var(--bg); cursor: pointer; }
+.checks label:has(input:checked) { background: var(--teal-soft); color: var(--teal-deep); }
+.checks input { accent-color: var(--teal); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; background: var(--bg); padding: 5px; border-radius: 14px; }
+.seg label { padding: 8px 14px; cursor: pointer; font-weight: 700; font-size: 15px; display: flex; gap: 6px; align-items: center; border-radius: 10px; }
+.seg label:has(input:checked) { background: var(--surface); color: var(--teal-deep); box-shadow: var(--shadow); }
+.seg input { accent-color: var(--teal); }
 
-button, .btn { font: 600 16px var(--font-body); border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
-button:hover:not(:disabled) { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button, .btn { font: 700 16px var(--font-body); border-radius: 12px; padding: 10px 18px; cursor: pointer; border: 2px solid var(--line); background: var(--surface); color: var(--ink); transition: transform .08s, filter .15s; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+button svg { width: 18px; height: 18px; flex: none; }
+button:hover:not(:disabled) { border-color: var(--teal); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button.primary { background: var(--teal); border-color: var(--teal); color: var(--on-color); box-shadow: 0 3px 0 var(--teal-deep); }
+button.primary:hover:not(:disabled) { filter: brightness(1.06); }
+button.fun { background: var(--orange); border-color: var(--orange); color: #fff; box-shadow: 0 3px 0 #d65a2a; }
+button.violet { background: var(--violet); border-color: var(--violet); color: #fff; box-shadow: 0 3px 0 #4b3dc4; }
 button:disabled { opacity: .5; cursor: not-allowed; }
-button.small { padding: 4px 10px; font-size: 14px; }
-button.link { border: 0; background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+button.small { padding: 5px 11px; font-size: 14px; border-radius: 10px; }
+button.link { border: 0; background: none; color: var(--teal-deep); padding: 0; text-decoration: underline; font-weight: 700; }
+button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; background: var(--violet-soft); color: var(--violet); border-color: transparent; }
 
-.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; min-height: 130px; border: 2px dashed var(--line); border-radius: var(--radius); cursor: pointer; color: var(--muted); padding: 16px; }
-.drop.over { border-color: var(--accent); background: var(--accent-soft); }
-.drop strong { color: var(--ink); }
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; min-height: 140px; border: 3px dashed var(--teal); border-radius: var(--radius); cursor: pointer; color: var(--muted); padding: 16px; background: var(--teal-soft); }
+.drop.over { background: var(--sun-soft); border-color: var(--sun); }
+.drop strong { color: var(--teal-deep); font-size: 18px; }
+.drop svg { width: 40px; height: 40px; color: var(--teal); }
 
-.list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.list > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.list { display: flex; flex-direction: column; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.list > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 16px; border-top: 1px solid var(--line); }
 .list > div:first-child { border-top: 0; }
 .list .grow { flex: 1 1 240px; display: flex; flex-direction: column; }
 
-.pill { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 13px; font-weight: 800; background: var(--cs, var(--teal-soft)); color: var(--c, var(--teal-deep)); white-space: nowrap; }
 .pill.plain { background: var(--bg); color: var(--muted); }
-.pill.amber { background: var(--amber-soft); color: var(--amber); }
+.pill.amber { background: var(--sun-soft); color: #9a6b00; }
+:root[data-theme="dark"] .pill.amber { color: var(--sun); }
 .pill.good { background: var(--good-soft); color: var(--good); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); }
 
-.progress { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
-.progress > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.progress { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; background: linear-gradient(90deg, var(--teal), var(--sun)); width: 0; transition: width .3s; border-radius: 99px; }
 
-.bars { display: flex; flex-direction: column; gap: 8px; }
-.bar { display: grid; grid-template-columns: minmax(130px, 1.3fr) 2fr 48px; gap: 12px; align-items: center; }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar { display: grid; grid-template-columns: minmax(130px, 1.3fr) 2fr 52px; gap: 12px; align-items: center; }
 .bar-label small { display: block; }
-.bar-track { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar-track { height: 12px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 99px; }
-.bar-fill.good { background: var(--good); } .bar-fill.mid { background: var(--amber); } .bar-fill.bad { background: var(--bad); }
-.bar-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.bar-fill.good { background: var(--good); } .bar-fill.mid { background: var(--sun); } .bar-fill.bad { background: var(--bad); }
+.bar-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 800; }
 
-/* Lecteur de quiz */
-.quiz-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; color: var(--muted); }
+/* Quiz */
+.quiz-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; color: var(--muted); font-weight: 700; }
 .quiz-top .push { margin-left: auto; }
-.timer { font: 700 24px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
-.timer.urgent { color: var(--bad); }
-.grid { display: flex; flex-wrap: wrap; gap: 4px; }
-.grid button { width: 38px; padding: 4px 0; font-size: 13px; font-variant-numeric: tabular-nums; }
-.grid button.done { background: var(--accent-soft); border-color: var(--accent-soft); }
-.grid button.flagged { box-shadow: inset 0 -3px 0 var(--amber); }
-.grid button.current { outline: 2px solid var(--accent); }
-.qcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; display: flex; flex-direction: column; gap: 16px; }
-.qcard .qtext { font-size: 21px; font-weight: 600; line-height: 1.4; white-space: pre-wrap; }
+.timer { font: 600 24px var(--font-display); color: var(--violet); font-variant-numeric: tabular-nums; background: var(--violet-soft); padding: 2px 14px; border-radius: 99px; }
+.timer.urgent { color: var(--bad); background: var(--bad-soft); }
+.combo { font: 600 16px var(--font-display); color: var(--orange); background: var(--orange-soft); padding: 2px 12px; border-radius: 99px; }
+.grid { display: flex; flex-wrap: wrap; gap: 5px; }
+.grid button { width: 38px; padding: 4px 0; font-size: 13px; font-variant-numeric: tabular-nums; border-radius: 9px; }
+.grid button.done { background: var(--teal-soft); border-color: var(--teal-soft); color: var(--teal-deep); }
+.grid button.flagged { box-shadow: inset 0 -4px 0 var(--orange); }
+.grid button.current { border-color: var(--violet); }
+.qcard { background: var(--surface); border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow); border-top: 6px solid var(--c, var(--teal)); }
+.qcard .qtext { font-size: 21px; font-weight: 700; line-height: 1.45; white-space: pre-wrap; }
+.qtools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.qtools .push { margin-left: auto; }
 .choices { display: grid; gap: 10px; }
-.choice { display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 9px; font-weight: 400; }
-.choice .key { flex: 0 0 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--bg); font-weight: 700; font-size: 14px; }
-.choice.selected { border-color: var(--accent); background: var(--accent-soft); }
-.choice.selected .key { background: var(--accent); color: var(--accent-ink); }
+.choice { display: flex; gap: 12px; align-items: flex-start; justify-content: flex-start; text-align: left; padding: 12px 14px; border-radius: 14px; font-weight: 600; }
+.choice .key { flex: 0 0 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: var(--bg); font: 600 15px var(--font-display); }
+.choice:hover:not(:disabled) { background: var(--teal-soft); }
+.choice.selected { border-color: var(--violet); background: var(--violet-soft); }
+.choice.selected .key { background: var(--violet); color: #fff; }
 .choice.right { border-color: var(--good); background: var(--good-soft); }
-.choice.right .key { background: var(--good); color: var(--surface); }
+.choice.right .key { background: var(--good); color: #fff; }
 .choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
-.choice.wrong .key { background: var(--bad); color: var(--surface); }
+.choice.wrong .key { background: var(--bad); color: #fff; }
 .choice:disabled { opacity: 1; cursor: default; color: var(--ink); }
-.feedback { padding: 12px 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
+.choice.pop { animation: pop .35s ease-out; }
+@keyframes pop { 40% { transform: scale(1.03); } }
+.choice.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.feedback { padding: 12px 16px; border-radius: 14px; display: flex; flex-direction: column; gap: 4px; }
 .feedback.good { background: var(--good-soft); } .feedback.bad { background: var(--bad-soft); }
+.feedback strong { font-family: var(--font-display); font-weight: 600; font-size: 18px; }
 .quiz-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.flag { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.flag { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 700; }
+.flag input { accent-color: var(--orange); }
+.dico-box { display: flex; gap: 8px; flex: 1 1 260px; }
+.dico-box input { flex: 1; }
 
-.corr { border-left: 4px solid var(--good); }
+/* Corrections, banque, lexique */
+.corr { border-left: 6px solid var(--good); }
 .corr.wrong { border-left-color: var(--bad); }
 .opts { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
-.opts li { padding: 4px 8px; border-radius: 6px; display: flex; gap: 8px; }
-.opts li.right { background: var(--good-soft); font-weight: 600; }
+.opts li { padding: 5px 10px; border-radius: 10px; display: flex; gap: 8px; }
+.opts li.right { background: var(--good-soft); font-weight: 700; }
 .opts li.wrong { background: var(--bad-soft); text-decoration: line-through; }
-.expl { background: var(--bg); padding: 8px 12px; border-radius: 8px; font-size: 16px; }
+.expl { background: var(--sun-soft); padding: 10px 14px; border-radius: 12px; font-size: 16px; }
 .qhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .qhead .push { margin-left: auto; }
+.words { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.word { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px; border-left: 6px solid var(--c, var(--violet)); }
+.word .w-en { font: 600 20px var(--font-display); }
+.word .w-fr { font-weight: 800; color: var(--c, var(--violet)); }
 
-.log { font-size: 14px; color: var(--muted); max-height: 140px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.log { font-size: 14px; color: var(--muted); max-height: 160px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 
-dialog { border: 1px solid var(--line); border-radius: 12px; padding: 20px; max-width: 460px; width: calc(100% - 32px); background: var(--surface); color: var(--ink); }
-dialog::backdrop { background: rgba(10, 20, 30, .45); }
+/* Bulle de traduction d'un mot */
+#sel-btn { position: absolute; z-index: 40; border-radius: 99px; padding: 6px 14px; font-size: 14px; background: var(--violet); color: #fff; border: 0; box-shadow: var(--shadow); }
+#dico-pop { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(460px, calc(100vw - 24px)); z-index: 45; background: var(--surface); border-radius: 20px; padding: 16px 18px; box-shadow: 0 16px 40px -10px rgba(0,0,0,.35); border-top: 6px solid var(--violet); display: flex; flex-direction: column; gap: 6px; }
+#dico-pop .w-en { font: 600 22px var(--font-display); }
+#dico-pop .w-fr { font-weight: 800; color: var(--violet); font-size: 18px; }
+#dico-pop .close { position: absolute; top: 10px; right: 10px; }
+
+dialog { border: 0; border-radius: 20px; padding: 22px; max-width: 460px; width: calc(100% - 32px); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(10, 30, 28, .5); }
 dialog .row { justify-content: flex-end; margin-top: 16px; }
-.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 10px; max-width: calc(100vw - 32px); z-index: 50; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 14px; max-width: calc(100vw - 32px); z-index: 50; font-weight: 700; }
 .toast.error { background: var(--bad); color: #fff; }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
 
-@media (max-width: 560px) {
+@media (max-width: 720px) {
   h1 { font-size: 28px; }
-  .bar { grid-template-columns: 1fr 1fr 44px; }
+  header { position: static; }
+  nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; background: var(--surface); flex-wrap: nowrap; overflow-x: auto; gap: 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px -10px rgba(0,0,0,.3); }
+  nav button { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 2px; color: var(--muted); border-radius: 12px; }
+  nav button svg { width: 22px; height: 22px; }
+  nav button:hover { background: var(--bg); color: var(--ink); }
+  nav button[aria-current="page"] { background: var(--teal-soft); color: var(--teal-deep); }
+  main { padding-bottom: 110px; }
+  .hero { grid-template-columns: 1fr 92px; padding: 18px; gap: 12px; }
+  .hero h1 { font-size: 24px; }
+  .hero .cta { grid-column: 1 / -1; margin-top: 4px; }
+  .ring { width: 92px; height: 92px; align-self: start; }
+  .ring b { font-size: 22px; }
+  .ring small { font-size: 10px; max-width: 64px; margin: 0 auto; }
+  .bar { grid-template-columns: 1fr 1fr 46px; }
   .qcard { padding: 16px; }
   .qcard .qtext { font-size: 19px; }
+  #dico-pop, .toast { bottom: 90px; }
 }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="currentColor"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 2h8l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm7 1.5V8h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 13h8M8 17h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7zM19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z" fill="currentColor"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l3 2M9 2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v16H6.5A2.5 2.5 0 0 0 4 20.5zM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-lang" viewBox="0 0 24 24"><path d="M3 5h10M8 3v2m3 0c-1 4-4 7-7 9m2-6c1 2 3 4 6 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 21l4-10 4 10m-6.5-3h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-5 5l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
 <header>
   <div class="head-in">
     <div class="brand">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="9" width="26" height="17" rx="2" fill="var(--accent)"/><path d="M8 9v17M13 9v17M18 9v17M23 9v17" stroke="var(--surface)" stroke-width="1.6"/><rect x="3" y="5" width="12" height="4" rx="1" fill="var(--amber)"/></svg>
+      <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="11" fill="#fff"/><rect x="8" y="15" width="24" height="15" rx="2.5" fill="#ff7a45"/><path d="M13 15v15M18 15v15M23 15v15M28 15v15" stroke="#fff" stroke-width="1.6"/><rect x="8" y="10" width="11" height="5" rx="1.5" fill="#f5b400"/><circle cx="29" cy="11" r="3.2" fill="#0e9f8e"/></svg>
       Quiz Supply Chain
     </div>
     <nav id="nav" aria-label="Sections">
-      <button type="button" data-view="home" aria-current="page">Accueil</button>
-      <button type="button" data-view="sources">Mes documents</button>
-      <button type="button" data-view="generate">Créer des questions</button>
-      <button type="button" data-view="practice">S'entraîner</button>
-      <button type="button" data-view="exam">Examen blanc</button>
-      <button type="button" data-view="bank">Mes questions</button>
-      <button type="button" data-view="history">Résultats</button>
+      <button type="button" data-view="home" aria-current="page"><svg><use href="#i-home"/></svg>Accueil</button>
+      <button type="button" data-view="sources"><svg><use href="#i-doc"/></svg>Docs</button>
+      <button type="button" data-view="generate"><svg><use href="#i-spark"/></svg>Créer</button>
+      <button type="button" data-view="practice"><svg><use href="#i-target"/></svg>Réviser</button>
+      <button type="button" data-view="exam"><svg><use href="#i-clock"/></svg>Examen</button>
+      <button type="button" data-view="bank"><svg><use href="#i-book"/></svg>Banque</button>
+      <button type="button" data-view="lexicon"><svg><use href="#i-lang"/></svg>Lexique</button>
+      <button type="button" data-view="history"><svg><use href="#i-chart"/></svg>Scores</button>
     </nav>
   </div>
 </header>
@@ -213,37 +323,54 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 
   <!-- ACCUEIL -->
   <section id="view-home" class="view active" aria-labelledby="home-title">
-    <h1 id="home-title">Prépare ton examen de supply chain</h1>
-    <p class="lead">Dépose tes cours, ton livre et tes quiz d'école, laisse Claude en tirer des centaines de QCM, puis entraîne-toi dans les conditions de l'examen : 80 questions en 3 heures.</p>
+    <div class="hero">
+      <div>
+        <h1 id="home-title">Salut ! On révise la supply chain ?</h1>
+        <p id="hero-sub">Dépose tes cours, laisse Claude en tirer des QCM, puis entraîne-toi pour l'examen : 80 questions en 3 heures.</p>
+      </div>
+      <div class="ring" aria-label="Objectif du jour">
+        <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="12"/><circle id="ring-arc" cx="60" cy="60" r="50" fill="none" stroke="#f5b400" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+        <div class="ring-txt"><b id="ring-num">0</b><small id="ring-of">sur 40 aujourd'hui</small></div>
+      </div>
+      <div class="cta">
+        <button type="button" id="quick-btn"><svg><use href="#i-target"/></svg>20 questions rapides</button>
+        <button type="button" class="alt" data-goto="exam"><svg><use href="#i-clock"/></svg>Examen blanc</button>
+      </div>
+    </div>
     <div id="resume-box" class="notice hidden">
       <strong>Une série est en cours.</strong>
       <div class="row"><button type="button" class="primary" id="resume-btn">Reprendre</button><button type="button" id="drop-cur-btn">L'abandonner</button></div>
     </div>
     <div class="tiles" id="home-tiles"></div>
+    <div class="panel">
+      <div class="row between"><h2>Mes réglages</h2></div>
+      <div class="row">
+        <label class="field" for="exam-date">Date de mon examen<input type="date" id="exam-date"></label>
+        <label class="field" for="daily-goal">Objectif : questions par jour<input type="number" id="daily-goal" min="5" max="500" step="5" value="40"></label>
+      </div>
+    </div>
     <h2>Par où commencer</h2>
     <ol class="steps" id="home-steps">
-      <li id="step-1"><strong>Dépose tes documents</strong><span class="hint">Le PDF du cours, le livre, le quiz d'entraînement de l'école.</span><button type="button" class="link" data-goto="sources">Mes documents</button></li>
-      <li id="step-2"><strong>Crée des questions</strong><span class="hint">Claude lit tes documents et rédige des QCM corrigés et expliqués.</span><button type="button" class="link" data-goto="generate">Créer des questions</button></li>
-      <li id="step-3"><strong>Entraîne-toi</strong><span class="hint">Par thème, avec la correction après chaque réponse.</span><button type="button" class="link" data-goto="practice">S'entraîner</button></li>
-      <li id="step-4"><strong>Passe un examen blanc</strong><span class="hint">80 questions, chrono de 3 h, note sur 20.</span><button type="button" class="link" data-goto="exam">Examen blanc</button></li>
+      <li id="step-1" class="c-teal"><strong>Dépose tes documents</strong><span class="hint">Le PDF du cours, le livre, le quiz d'entraînement de l'école.</span><button type="button" class="link" data-goto="sources">Mes documents</button></li>
+      <li id="step-2" class="c-orange"><strong>Crée des questions</strong><span class="hint">Claude lit tes documents et rédige des QCM corrigés et expliqués.</span><button type="button" class="link" data-goto="generate">Créer des questions</button></li>
+      <li id="step-3" class="c-sun"><strong>Entraîne-toi</strong><span class="hint">Par thème, avec la correction après chaque réponse.</span><button type="button" class="link" data-goto="practice">S'entraîner</button></li>
+      <li id="step-4" class="c-violet"><strong>Passe un examen blanc</strong><span class="hint">80 questions, chrono de 3 h, note sur 20.</span><button type="button" class="link" data-goto="exam">Examen blanc</button></li>
     </ol>
     <h2>Mes thèmes à retravailler</h2>
-    <div id="home-topics" class="bars"></div>
+    <div id="home-topics" class="bars panel"></div>
   </section>
 
   <!-- DOCUMENTS -->
   <section id="view-sources" class="view" aria-labelledby="src-title">
-    <h1 id="src-title">Mes documents</h1>
+    <div class="page-title"><span class="ico c-teal" style="background:var(--cs);color:var(--c)"><svg><use href="#i-doc"/></svg></span><h1 id="src-title">Mes documents</h1></div>
     <form id="upload-form" class="panel">
-      <fieldset>
-        <legend>Ce que tu déposes</legend>
-        <div class="seg" role="radiogroup">
-          <label><input type="radio" name="kind" value="course" checked> Un cours ou un livre</label>
-          <label><input type="radio" name="kind" value="quiz"> Un quiz (questions d'entraînement)</label>
-        </div>
-        <p class="hint" id="kind-hint">Claude s'en servira pour créer de nouvelles questions.</p>
-      </fieldset>
+      <div class="seg" role="radiogroup" aria-label="Type de document">
+        <label><input type="radio" name="kind" value="course" checked> Un cours ou un livre</label>
+        <label><input type="radio" name="kind" value="quiz"> Un quiz (questions d'entraînement)</label>
+      </div>
+      <p class="hint" id="kind-hint">Claude s'en servira pour créer de nouvelles questions.</p>
       <label class="drop" id="drop" for="file-input">
+        <svg><use href="#i-upload"/></svg>
         <strong>Clique ici ou dépose tes fichiers</strong>
         <span>PDF, Word (.docx) ou texte (.txt, .md, .csv)</span>
         <span id="drop-files"></span>
@@ -256,7 +383,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
           <label class="field" for="paste-text">Texte<textarea id="paste-text" rows="7" placeholder="Colle ici un cours ou les questions d'un quiz"></textarea></label>
         </div>
       </details>
-      <div class="row"><button type="submit" class="primary" id="upload-btn">Ajouter</button><span id="upload-status" class="hint"></span></div>
+      <div class="row"><button type="submit" class="primary" id="upload-btn"><svg><use href="#i-upload"/></svg>Ajouter</button><span id="upload-status" class="hint"></span></div>
       <div id="upload-log" class="log"></div>
     </form>
     <p class="hint">Un PDF scanné (une photo de page, sans texte sélectionnable) ne peut pas être lu. Un très gros livre prend une ou deux minutes à importer.</p>
@@ -265,14 +392,21 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 
   <!-- GENERATION -->
   <section id="view-generate" class="view" aria-labelledby="gen-title">
-    <h1 id="gen-title">Créer des questions</h1>
+    <div class="page-title"><span class="ico c-orange" style="background:var(--cs);color:var(--c)"><svg><use href="#i-spark"/></svg></span><h1 id="gen-title">Créer des questions</h1></div>
     <form id="gen-form" class="panel">
       <fieldset>
         <legend>Documents à utiliser</legend>
         <div id="gen-sources" class="checks"></div>
       </fieldset>
       <div class="row">
-        <label class="field" for="gen-count">Nombre de questions à créer<input type="number" id="gen-count" value="100" min="10" max="3000" step="10"></label>
+        <label class="field" for="gen-count">Nombre de questions<input type="number" id="gen-count" value="100" min="10" max="3000" step="10"></label>
+        <label class="field" for="gen-lang">Langue des questions
+          <select id="gen-lang">
+            <option value="same" selected>Celle du document</option>
+            <option value="en">Anglais (comme l'examen)</option>
+            <option value="fr">Français</option>
+          </select>
+        </label>
         <label class="field" for="gen-tier">Qualité
           <select id="gen-tier">
             <option value="default" selected>Normale (recommandée)</option>
@@ -282,10 +416,10 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       </div>
       <label class="field" for="gen-focus">Consigne facultative<input type="text" id="gen-focus" placeholder="ex. insister sur les calculs de stock de sécurité et la méthode ABC"></label>
       <div class="row">
-        <button type="submit" class="primary" id="gen-btn">Créer les questions</button>
+        <button type="submit" class="fun" id="gen-btn"><svg><use href="#i-spark"/></svg>Créer les questions</button>
         <button type="button" id="gen-stop" class="hidden">Arrêter</button>
       </div>
-      <p class="hint">Claude rédige les questions par lots de 20, à partir de passages successifs de tes documents. Elles s'ajoutent à ta banque au fur et à mesure : tu peux commencer à t'entraîner pendant ce temps, mais garde cette page ouverte jusqu'à la fin. Compte environ une minute par lot. La génération utilise ton forfait Claude.</p>
+      <p class="hint">Claude rédige les questions par lots de 20. Elles s'ajoutent à ta banque au fur et à mesure : tu peux t'entraîner pendant ce temps, mais garde cette page ouverte jusqu'à la fin. Compte environ une minute par lot. La création utilise ton forfait Claude.</p>
     </form>
     <div id="gen-progress" class="panel hidden">
       <div class="row between"><strong id="gen-status"></strong><span id="gen-pill" class="pill"></span></div>
@@ -296,9 +430,9 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 
   <!-- ENTRAINEMENT -->
   <section id="view-practice" class="view" aria-labelledby="pr-title">
-    <h1 id="pr-title">S'entraîner</h1>
+    <div class="page-title"><span class="ico c-sun" style="background:var(--cs);color:var(--c)"><svg><use href="#i-target"/></svg></span><h1 id="pr-title">S'entraîner</h1></div>
     <form id="practice-form" class="panel">
-      <div class="seg" role="radiogroup">
+      <div class="seg" role="radiogroup" aria-label="Questions">
         <label><input type="radio" name="pmode" value="practice" checked> Toutes les questions</label>
         <label><input type="radio" name="pmode" value="review"> Seulement mes erreurs</label>
       </div>
@@ -307,13 +441,13 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <legend>Thèmes (aucun coché = tous)</legend>
         <div id="pr-topics" class="checks"></div>
       </fieldset>
-      <div><button type="submit" class="primary">Commencer</button></div>
+      <div><button type="submit" class="primary"><svg><use href="#i-target"/></svg>C'est parti</button></div>
     </form>
   </section>
 
   <!-- EXAMEN -->
   <section id="view-exam" class="view" aria-labelledby="ex-title">
-    <h1 id="ex-title">Examen blanc</h1>
+    <div class="page-title"><span class="ico c-violet" style="background:var(--cs);color:var(--c)"><svg><use href="#i-clock"/></svg></span><h1 id="ex-title">Examen blanc</h1></div>
     <form id="exam-form" class="panel">
       <p>Comme le jour J : questions tirées au hasard dans toute ta banque, réparties entre les thèmes, et correction seulement à la fin.</p>
       <div class="row">
@@ -321,7 +455,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <label class="field" for="ex-min">Durée en minutes<input type="number" id="ex-min" value="180" min="1" max="600"></label>
       </div>
       <p class="hint" id="ex-pace">Soit 2 min 15 s par question.</p>
-      <div><button type="submit" class="primary">Démarrer l'examen</button></div>
+      <div><button type="submit" class="violet"><svg><use href="#i-clock"/></svg>Démarrer l'examen</button></div>
     </form>
   </section>
 
@@ -329,23 +463,28 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
   <section id="view-quiz" class="view" aria-label="Questionnaire">
     <div class="quiz-top">
       <span id="quiz-label"></span>
+      <span id="quiz-combo" class="combo hidden"></span>
       <span id="quiz-timer" class="timer hidden"></span>
-      <button type="button" class="push" id="quiz-end">Terminer</button>
+      <button type="button" class="push small" id="quiz-end">Terminer</button>
     </div>
     <div class="progress"><div id="quiz-bar"></div></div>
     <div id="quiz-grid" class="grid hidden"></div>
-    <article class="qcard">
+    <article class="qcard" id="qcard">
       <div class="qhead" id="q-meta"></div>
       <p class="qtext" id="q-text"></p>
       <div class="choices" id="q-choices"></div>
       <div id="q-feedback" class="feedback hidden"></div>
+      <div class="qtools">
+        <button type="button" class="chip" id="q-translate"><svg><use href="#i-lang"/></svg>Traduire en français</button>
+        <form class="dico-box" id="dico-form"><input type="search" id="dico-input" placeholder="Un mot à traduire ? ex. lead time" aria-label="Mot à traduire"><button type="submit" class="small">Traduire</button></form>
+      </div>
     </article>
     <div class="quiz-nav">
       <button type="button" id="q-prev">← Précédente</button>
       <label class="flag" for="q-flag"><input type="checkbox" id="q-flag"> À revoir</label>
       <button type="button" id="q-next" class="primary">Suivante →</button>
     </div>
-    <p class="hint">Raccourcis clavier : A, B, C, D pour répondre, flèches pour changer de question.</p>
+    <p class="hint">Astuce : sélectionne un mot de la question pour le traduire. Au clavier : A, B, C, D pour répondre, flèches pour avancer.</p>
   </section>
 
   <!-- RESULTAT -->
@@ -353,9 +492,9 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 
   <!-- BANQUE -->
   <section id="view-bank" class="view" aria-labelledby="bank-title">
-    <h1 id="bank-title">Mes questions</h1>
+    <div class="page-title"><span class="ico c-pink" style="background:var(--cs);color:var(--c)"><svg><use href="#i-book"/></svg></span><h1 id="bank-title">Mes questions</h1></div>
     <div class="row">
-      <input type="search" id="bank-search" placeholder="Rechercher un mot" style="flex:2 1 200px;width:auto">
+      <input type="search" id="bank-search" placeholder="Rechercher un mot" style="flex:2 1 200px;width:auto" aria-label="Rechercher">
       <select id="bank-topic" style="flex:1 1 160px;width:auto" aria-label="Thème"></select>
       <select id="bank-filter" style="flex:1 1 140px;width:auto" aria-label="Filtre">
         <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option>
@@ -366,13 +505,36 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     <div><button type="button" id="bank-more" class="hidden">Afficher plus</button></div>
   </section>
 
+  <!-- LEXIQUE -->
+  <section id="view-lexicon" class="view" aria-labelledby="lex-title">
+    <div class="page-title"><span class="ico c-violet" style="background:var(--cs);color:var(--c)"><svg><use href="#i-lang"/></svg></span><h1 id="lex-title">Mon lexique anglais → français</h1></div>
+    <p class="lead">Chaque mot que tu traduis pendant tes révisions est gardé ici. Relis-les avant l'examen.</p>
+    <form class="panel" id="lex-form">
+      <div class="row">
+        <input type="search" id="lex-input" placeholder="Tape un mot ou une expression, ex. safety stock" style="flex:1 1 240px;width:auto" aria-label="Mot à traduire">
+        <button type="submit" class="violet">Traduire</button>
+      </div>
+    </form>
+    <input type="search" id="lex-filter" placeholder="Chercher dans mon lexique" aria-label="Chercher dans mon lexique">
+    <div id="lex-list" class="words"></div>
+  </section>
+
   <!-- HISTORIQUE -->
   <section id="view-history" class="view" aria-labelledby="hist-title">
-    <h1 id="hist-title">Résultats</h1>
+    <div class="page-title"><span class="ico c-teal" style="background:var(--cs);color:var(--c)"><svg><use href="#i-chart"/></svg></span><h1 id="hist-title">Mes résultats</h1></div>
     <div id="history" class="list"></div>
   </section>
 </main>
 
+<button type="button" id="sel-btn" class="hidden">Traduire</button>
+<div id="dico-pop" class="hidden" role="dialog" aria-label="Traduction">
+  <button type="button" class="small close" id="dico-close" aria-label="Fermer">✕</button>
+  <span class="w-en" id="dp-en"></span>
+  <span class="w-fr" id="dp-fr"></span>
+  <span id="dp-def"></span>
+  <small id="dp-ex"></small>
+</div>
+<canvas id="confetti" aria-hidden="true"></canvas>
 <dialog id="dlg"><p id="dlg-text"></p><div class="row" id="dlg-btns"></div></dialog>
 <div id="toast" class="toast hidden" role="status"></div>
 
@@ -423,7 +585,7 @@ function ask(text, buttons = [["Annuler", false], ["OK", true]]) {
 // Stockage : chaque personne a son espace privé dans la base de l'artefact.
 // ======================================================================
 let DB = null, ROOT = null;
-const S = { sources: [], batches: new Map(), questions: [], qById: new Map(), stats: {}, attempts: [], cur: null };
+const S = { sources: [], batches: new Map(), questions: [], qById: new Map(), stats: {}, attempts: [], cur: null, dict: {}, prog: { days: {}, goal: 40, examDate: "", showFr: false } };
 const STAT_SHARDS = 8;
 
 const chains = new Map();
@@ -456,6 +618,10 @@ async function loadAll() {
   S.attempts = at.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => b.startedAt - a.startedAt);
   const cur = misc.docs.find((d) => d.id === "cur");
   S.cur = cur?.data()?.quiz ? structuredClone(cur.data().quiz) : null;
+  const dict = misc.docs.find((d) => d.id === "dict");
+  S.dict = dict ? structuredClone(dict.data().words || {}) : {};
+  const prog = misc.docs.find((d) => d.id === "progress");
+  if (prog) Object.assign(S.prog, structuredClone(prog.data()));
   reindex();
 }
 
@@ -508,7 +674,25 @@ async function deleteQuestion(qid) {
 const shardOf = (qid) => { let h = 0; for (const c of qid) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % STAT_SHARDS; };
 const dirtyShards = new Set();
 let statsTimer = null;
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+let progTimer = null;
+function saveProgress() {
+  clearTimeout(progTimer);
+  progTimer = setTimeout(() => write(col("misc").doc("progress"), "set", S.prog).catch(() => {}), 1200);
+}
+function streakDays() {
+  let n = 0;
+  const d = new Date();
+  if (!S.prog.days[today()]) d.setDate(d.getDate() - 1);
+  for (;;) {
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!S.prog.days[k]) return n;
+    n++; d.setDate(d.getDate() - 1);
+  }
+}
 function record(qid, correct) {
+  S.prog.days[today()] = (S.prog.days[today()] || 0) + 1;
+  saveProgress();
   const s = (S.stats[qid] ||= [0, 0]);
   s[0]++;
   if (!correct) s[1]++; else if (s[1] > 0) s[1]--;
@@ -526,6 +710,9 @@ async function flushStats() {
   }
 }
 const statOf = (qid) => S.stats[qid] || [0, 0];
+const TOPIC_COLORS = ["c-teal", "c-orange", "c-violet", "c-pink", "c-sun", "c-good"];
+const topicClass = (t) => { let h = 0; for (const c of String(t)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return TOPIC_COLORS[h % TOPIC_COLORS.length]; };
+const topicPill = (t) => `<span class="pill ${topicClass(t)}">${esc(t)}</span>`;
 
 // Série en cours, enregistrée pour pouvoir la reprendre (même sur un autre appareil).
 let curTimer = null;
@@ -685,10 +872,16 @@ function topicsHint() {
   return t.length ? `Thèmes déjà utilisés (réutilise-les quand ils conviennent, sinon crée un thème court) : ${t.join(" ; ")}.` : "Donne à chaque question un thème court de supply chain, par exemple « Gestion des stocks » ou « Prévision de la demande ».";
 }
 
-function generationPrompt(chunk, sourceName, angle, count, focus, existing) {
+const LANG_RULE = {
+  same: "Rédige les questions, les propositions et les explications dans la même langue que le passage (anglais si le passage est en anglais).",
+  en: "Write the questions, the choices and the explanations in English, like the real exam.",
+  fr: "Rédige les questions, les propositions et les explications en français.",
+};
+function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang = "same") {
   return [
     "Tu es un enseignant expert en supply chain et en logistique. Tu prépares un étudiant à un examen de 80 QCM en 3 heures.",
-    `Rédige ${count} nouveaux QCM en français à partir du passage de cours ci-dessous.`,
+    `Rédige ${count} nouveaux QCM à partir du passage de cours ci-dessous.`,
+    LANG_RULE[lang] || LANG_RULE.same,
     `Angle à privilégier pour ce lot : ${angle}.`,
     focus ? `Consigne de l'étudiant : ${focus}` : "",
     "Règles :",
@@ -708,12 +901,12 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing) {
 
 function extractionPrompt(chunk, sourceName) {
   return [
-    "Voici un extrait d'un quiz d'entraînement de supply chain donné par une école. Recopie TOUTES les questions qu'il contient, en français, sans en inventer.",
+    "Voici un extrait d'un quiz d'entraînement de supply chain donné par une école. Recopie TOUTES les questions qu'il contient, dans leur langue d'origine (ne traduis pas), sans en inventer.",
     "- Garde l'énoncé et les propositions tels quels (corrige seulement les coupures de ligne).",
     "- Si la bonne réponse est indiquée dans le document, utilise-la et mets \"answerGuessed\": false.",
     "- Sinon, trouve la bonne réponse avec tes connaissances de supply chain, mets \"answerGuessed\": true et explique ton raisonnement.",
     "- Une question ouverte (sans propositions) devient un QCM de 4 propositions dont une seule juste, avec \"answerGuessed\": true.",
-    "- Écris une courte explication pour chaque question.",
+    "- Écris une courte explication pour chaque question, en français.",
     topicsHint(),
     `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false}]}`,
     'Si l\'extrait ne contient aucune question, réponds {"questions":[]}.',
@@ -740,9 +933,190 @@ async function chunksOf(sourceId) {
 }
 
 // ======================================================================
+// Traduction des questions et dictionnaire
+// ======================================================================
+const shown = (q) => (S.prog.showFr && q.fr ? { ...q.fr, fr: true } : { question: q.question, choices: q.choices, explanation: q.explanation, fr: false });
+const translating = new Map();
+const stripQ = ({ batchId, sourceId, ...rest }) => rest;
+
+async function saveBatchOf(q) {
+  const b = S.batches.get(q.batchId);
+  if (b) await write(col("qbatches").doc(b.id), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(stripQ) });
+}
+
+function translateQuestion(q) {
+  if (q.fr) return Promise.resolve(q.fr);
+  if (translating.has(q.id)) return translating.get(q.id);
+  const prompt = [
+    "Traduis ce QCM de supply chain en français clair et naturel, pour une étudiante ou un étudiant francophone.",
+    "Garde les termes techniques usuels et ajoute entre parenthèses le terme anglais d'origine quand c'est utile (ex. « stock de sécurité (safety stock) »).",
+    "Garde exactement le même nombre de propositions, dans le même ordre. Si un texte est déjà en français, recopie-le.",
+    'Réponds uniquement avec un objet JSON : {"question":"…","choices":["…"],"explanation":"…"}',
+    "",
+    JSON.stringify({ question: q.question, choices: q.choices, explanation: q.explanation || "" }),
+  ].join("\n");
+  const job = SAMPLE.json(prompt, { modelTier: "quick", cache: false })
+    .then(async (r) => {
+      if (!r || typeof r.question !== "string" || !Array.isArray(r.choices) || r.choices.length !== q.choices.length) throw { code: "invalid_json" };
+      q.fr = { question: r.question, choices: r.choices.map(String), explanation: String(r.explanation || "") };
+      // Toutes les copies de la question en mémoire reçoivent la traduction.
+      const b = S.batches.get(q.batchId);
+      const orig = b?.questions.find((x) => x.id === q.id);
+      if (orig) orig.fr = q.fr;
+      await saveBatchOf(q).catch(() => {});
+      return q.fr;
+    })
+    .catch((e) => {
+      if (e?.code !== "cancelled") toast(e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Traduction impossible pour le moment. Réessaie.", true);
+      throw e;
+    })
+    .finally(() => translating.delete(q.id));
+  translating.set(q.id, job);
+  return job;
+}
+
+$("#q-translate").addEventListener("click", async () => {
+  const q = itemQ(quiz.session.items[quiz.idx]);
+  if (!q) return;
+  if (S.prog.showFr && q.fr) { S.prog.showFr = false; saveProgress(); renderQuestion(); return; }
+  S.prog.showFr = true;
+  saveProgress();
+  if (!q.fr) {
+    const btn = $("#q-translate");
+    btn.disabled = true;
+    btn.lastChild.textContent = "Traduction…";
+    try { await translateQuestion(q); } catch { S.prog.showFr = false; }
+  }
+  renderQuestion();
+});
+
+const wordKey = (w) => w.trim().toLowerCase().replace(/\s+/g, " ").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+let dictTimer = null;
+function saveDict() {
+  clearTimeout(dictTimer);
+  dictTimer = setTimeout(() => write(col("misc").doc("dict"), "set", { words: S.dict }).catch(() => {}), 800);
+}
+
+async function lookupWord(word, context = "") {
+  const key = wordKey(word);
+  if (!key || key.length > 80) return;
+  const pop = $("#dico-pop");
+  pop.classList.remove("hidden");
+  pop.className = topicClass(key);
+  $("#dp-en").textContent = word.trim();
+  if (S.dict[key]) return showEntry(S.dict[key]);
+  if (!SAMPLE) { $("#dp-fr").textContent = "Claude n'est pas disponible dans cette vue."; $("#dp-def").textContent = ""; $("#dp-ex").textContent = ""; return; }
+  $("#dp-fr").textContent = "Recherche…";
+  $("#dp-def").textContent = ""; $("#dp-ex").textContent = "";
+  try {
+    const r = await SAMPLE.json([
+      "Tu es un dictionnaire anglais-français spécialisé en supply chain et logistique, pour une étudiante ou un étudiant francophone.",
+      `Mot ou expression : « ${word.trim()} »`,
+      context ? `Phrase où il apparaît : « ${context.slice(0, 400)} »` : "",
+      "Donne la traduction française la plus juste dans ce contexte, une définition simple en français (une ou deux phrases) et un court exemple d'usage en anglais avec sa traduction.",
+      "Si le mot est déjà en français, donne son équivalent anglais dans « fr » et explique-le quand même.",
+      'Réponds uniquement avec un objet JSON : {"fr":"…","definition":"…","example":"…"}',
+    ].filter(Boolean).join("\n"), { modelTier: "quick" });
+    const entry = { en: word.trim(), fr: String(r?.fr || "?"), definition: String(r?.definition || ""), example: String(r?.example || ""), at: Date.now() };
+    S.dict[key] = entry;
+    saveDict();
+    if (wordKey($("#dp-en").textContent) === key) showEntry(entry);
+  } catch (e) {
+    $("#dp-fr").textContent = e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Traduction impossible pour le moment.";
+  }
+}
+function showEntry(e) {
+  $("#dp-en").textContent = e.en;
+  $("#dp-fr").textContent = e.fr;
+  $("#dp-def").textContent = e.definition;
+  $("#dp-ex").textContent = e.example;
+}
+$("#dico-close").addEventListener("click", () => $("#dico-pop").classList.add("hidden"));
+$("#dico-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const w = $("#dico-input").value;
+  const q = quiz && itemQ(quiz.session.items[quiz.idx]);
+  if (w.trim()) lookupWord(w, q?.question || "");
+  $("#dico-input").value = "";
+});
+
+// Sélectionner un mot dans une question ou une correction fait apparaître « Traduire ».
+const selBtn = $("#sel-btn");
+let selWord = "", selContext = "";
+function onSelection() {
+  const sel = window.getSelection();
+  const text = sel && sel.toString().trim();
+  const inZone = sel?.anchorNode && sel.anchorNode.parentElement?.closest(".qcard, .corr, #bank-list .panel");
+  if (!text || !inZone || text.length > 60 || text.split(/\s+/).length > 5) { selBtn.classList.add("hidden"); return; }
+  const r = sel.getRangeAt(0).getBoundingClientRect();
+  selWord = text;
+  selContext = inZone.textContent.replace(/\s+/g, " ").slice(0, 400);
+  selBtn.textContent = `Traduire « ${text.length > 24 ? text.slice(0, 24) + "…" : text} »`;
+  selBtn.style.left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - 220)) + "px";
+  selBtn.style.top = window.scrollY + r.bottom + 8 + "px";
+  selBtn.classList.remove("hidden");
+}
+document.addEventListener("mouseup", () => setTimeout(onSelection, 10));
+document.addEventListener("touchend", () => setTimeout(onSelection, 350));
+document.addEventListener("selectionchange", () => { if (!window.getSelection()?.toString().trim()) setTimeout(() => selBtn.classList.add("hidden"), 200); });
+selBtn.addEventListener("mousedown", (e) => e.preventDefault());
+selBtn.addEventListener("click", () => { selBtn.classList.add("hidden"); lookupWord(selWord, selContext); });
+
+function renderLexicon() {
+  const f = wordKey($("#lex-filter").value);
+  const list = Object.entries(S.dict).filter(([k, e]) => !f || k.includes(f) || wordKey(e.fr).includes(f)).sort((a, b) => b[1].at - a[1].at);
+  $("#lex-list").innerHTML = list.length
+    ? list.map(([k, e]) => `<div class="word ${topicClass(k)}"><span class="w-en">${esc(e.en)}</span><span class="w-fr">${esc(e.fr)}</span><span>${esc(e.definition)}</span>${e.example ? `<small>${esc(e.example)}</small>` : ""}<div><button type="button" class="small" data-delword="${esc(k)}">Retirer</button></div></div>`).join("")
+    : `<p class="hint">Ton lexique est vide. Pendant un quiz, sélectionne un mot ou tape-le pour le traduire : il s'ajoutera ici.</p>`;
+}
+$("#lex-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const w = $("#lex-input").value;
+  if (!w.trim()) return;
+  $("#lex-input").value = "";
+  await lookupWord(w);
+  renderLexicon();
+});
+$("#lex-filter").addEventListener("input", renderLexicon);
+$("#lex-list").addEventListener("click", (e) => {
+  const k = e.target.dataset.delword;
+  if (k === undefined) return;
+  delete S.dict[k];
+  saveDict();
+  renderLexicon();
+});
+
+// ======================================================================
+// Encouragements et confettis
+// ======================================================================
+const CHEERS = ["Bonne réponse !", "Exact, bien joué !", "Parfait !", "Oui, c'est ça !", "Excellent !", "Bravo !"];
+const cheer = () => CHEERS[Math.floor(Math.random() * CHEERS.length)];
+function confetti(n = 80, rect = null) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv = $("#confetti");
+  const ctx = cv.getContext("2d");
+  cv.width = innerWidth; cv.height = innerHeight;
+  const colors = ["#0e9f8e", "#ff7a45", "#f5b400", "#6c5ce7", "#ef4f86", "#16a35a"];
+  const x0 = rect ? rect.left + rect.width / 2 : innerWidth / 2, y0 = rect ? rect.top + rect.height / 2 : innerHeight / 3;
+  const parts = Array.from({ length: n }, () => ({
+    x: x0, y: y0, vx: (Math.random() - 0.5) * (rect ? 8 : 16), vy: -Math.random() * (rect ? 7 : 14) - 2,
+    s: 4 + Math.random() * 5, c: colors[Math.floor(Math.random() * colors.length)], r: Math.random() * 6, life: 0,
+  }));
+  let frame = 0;
+  (function step() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const p of parts) {
+      p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.r += 0.2;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore();
+    }
+    if (++frame < (rect ? 45 : 110)) requestAnimationFrame(step); else ctx.clearRect(0, 0, cv.width, cv.height);
+  })();
+}
+
+// ======================================================================
 // Navigation
 // ======================================================================
-const RENDER = { home: renderHome, sources: renderSources, generate: renderGenerate, practice: renderPractice, exam: () => {}, bank: () => renderBank(true), history: renderHistory };
+const RENDER = { lexicon: renderLexicon, home: renderHome, sources: renderSources, generate: renderGenerate, practice: renderPractice, exam: () => {}, bank: () => renderBank(true), history: renderHistory };
 function setView(id) {
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + id));
   document.querySelectorAll("#nav button").forEach((b) => (b.dataset.view === id ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
@@ -763,15 +1137,39 @@ document.addEventListener("click", (e) => { const g = e.target.closest("[data-go
 // ======================================================================
 // Accueil
 // ======================================================================
+const tileIco = (id) => `<span class="t-ico"><svg><use href="#${id}"/></svg></span>`;
+function daysToExam() {
+  if (!S.prog.examDate) return null;
+  const [y, m, d] = S.prog.examDate.split("-").map(Number);
+  const exam = new Date(y, m - 1, d);
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  return Math.round((exam - now) / 86400000);
+}
 function renderHome() {
   const exams = S.attempts.filter((a) => a.mode === "exam");
   const last = exams[0];
   const lastPct = last ? last.score / last.total : null;
+  const done = S.prog.days[today()] || 0;
+  const goal = S.prog.goal || 40;
+  const streak = streakDays();
+  const j = daysToExam();
+  // Anneau de l'objectif du jour
+  $("#ring-num").textContent = done;
+  $("#ring-of").textContent = `sur ${goal} aujourd'hui`;
+  $("#ring-arc").style.strokeDashoffset = String(314.16 * (1 - Math.min(1, done / goal)));
+  $("#ring-arc").setAttribute("stroke", done >= goal ? "#5ee3a1" : "#f5b400");
+  const h = new Date().getHours();
+  $("#home-title").textContent = done >= goal ? "Objectif du jour atteint, bravo !" : h < 12 ? "Bonjour ! On révise la supply chain ?" : h < 18 ? "Bon après-midi ! Une petite série ?" : "Bonsoir ! Encore quelques questions ?";
+  $("#hero-sub").textContent = j !== null && j >= 0
+    ? (j === 0 ? "C'est le jour de l'examen. Tu as bien travaillé, fais-toi confiance !" : `Plus que ${j} jour${j > 1 ? "s" : ""} avant l'examen. ${done >= goal ? "Tu peux continuer pour prendre de l'avance." : `Encore ${goal - done} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour.`}`)
+    : S.questions.length ? `Encore ${Math.max(0, goal - done)} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour. Indique la date de ton examen plus bas pour voir le compte à rebours.` : "Dépose tes cours, laisse Claude en tirer des QCM, puis entraîne-toi pour l'examen : 80 questions en 3 heures.";
   $("#home-tiles").innerHTML = `
-    <div class="tile"><b>${fr(S.questions.length)}</b><span>questions dans ta banque</span></div>
-    <div class="tile"><b>${S.sources.length}</b><span>documents déposés</span></div>
-    <div class="tile"><b>${S.attempts.length}</b><span>séries terminées</span></div>
-    <div class="tile ${lastPct === null ? "" : lastPct >= 0.7 ? "good" : lastPct >= 0.5 ? "mid" : "bad"}"><b>${last ? note20(last.score, last.total) : "–"}</b><span>dernier examen blanc, sur 20</span></div>`;
+    <div class="tile c-orange">${tileIco("i-flame")}<b>${streak}</b><span>jour${streak > 1 ? "s" : ""} d'affilée</span></div>
+    <div class="tile c-violet">${tileIco("i-cal")}<b>${j === null ? "–" : j < 0 ? "passé" : "J-" + j}</b><span>avant l'examen</span></div>
+    <div class="tile c-teal">${tileIco("i-book")}<b>${fr(S.questions.length)}</b><span>questions dans ta banque</span></div>
+    <div class="tile ${lastPct === null ? "c-sun" : lastPct >= 0.7 ? "c-good" : lastPct >= 0.5 ? "c-sun" : "c-bad"}">${tileIco("i-chart")}<b>${last ? note20(last.score, last.total) : "–"}</b><span>dernier examen blanc, sur 20</span></div>`;
+  $("#exam-date").value = S.prog.examDate || "";
+  $("#daily-goal").value = goal;
   $("#step-1").classList.toggle("done", S.sources.length > 0);
   $("#step-2").classList.toggle("done", S.questions.some((q) => q.origin === "ia"));
   $("#step-3").classList.toggle("done", S.attempts.some((a) => a.mode !== "exam"));
@@ -782,6 +1180,9 @@ function renderHome() {
     ? t.slice(0, 8).map((x) => bar(x.topic, x.rate, `${x.count} questions`)).join("")
     : `<p class="hint">Réponds à quelques questions : tes thèmes les plus fragiles s'afficheront ici.</p>`;
 }
+$("#exam-date").addEventListener("change", (e) => { S.prog.examDate = e.target.value; saveProgress(); renderHome(); });
+$("#daily-goal").addEventListener("change", (e) => { S.prog.goal = Math.max(5, Math.min(500, Number(e.target.value) || 40)); saveProgress(); renderHome(); });
+$("#quick-btn").addEventListener("click", () => startQuiz("practice", 20, []));
 function topicTable() {
   const m = {};
   for (const q of S.questions) {
@@ -931,6 +1332,7 @@ $("#gen-form").addEventListener("submit", async (e) => {
   if (!ids.length) return toast("Coche au moins un document.", true);
   const target = Math.max(1, Math.min(3000, Number($("#gen-count").value) || 100));
   const tier = $("#gen-tier").value;
+  const lang = $("#gen-lang").value;
   const focus = $("#gen-focus").value.trim();
   const log = $("#gen-log");
   log.innerHTML = "";
@@ -962,7 +1364,7 @@ $("#gen-form").addEventListener("submit", async (e) => {
       const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
       setStatus(done, `Lot ${round} : ${part.name}, partie ${part.n + 1} (${angle.split(" (")[0]})…`);
       try {
-        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing), { signal: genCtl.signal, modelTier: tier, cache: false });
+        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing, lang), { signal: genCtl.signal, modelTier: tier, cache: false });
         const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4);
         const added = await addQuestions(list, part.sourceId, "ia");
         done += added;
@@ -1080,22 +1482,31 @@ function renderQuestion() {
   if (!q) {
     $("#q-meta").innerHTML = ""; $("#q-text").textContent = "Cette question a été supprimée de ta banque."; $("#q-choices").innerHTML = ""; $("#q-feedback").className = "feedback hidden";
   } else {
-    $("#q-meta").innerHTML = `<span class="pill">${esc(q.topic)}</span><span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}`;
-    $("#q-text").textContent = q.question;
+    const v = shown(q);
+    $("#qcard").className = "qcard " + topicClass(q.topic);
+    $("#q-meta").innerHTML = `${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}${v.fr ? '<span class="pill c-violet">traduit en français</span>' : ""}`;
+    $("#q-text").textContent = v.question;
+    const tb = $("#q-translate");
+    tb.disabled = !SAMPLE && !q.fr;
+    tb.lastChild.textContent = v.fr ? "Voir l'original" : q.fr ? "Voir en français" : "Traduire en français";
+    if (S.prog.showFr && !q.fr && SAMPLE && !translating.has(q.id)) translateQuestion(q).then(() => quiz && itemQ(quiz.session.items[quiz.idx]) === q && renderQuestion());
     const fb = quiz.feedback[it.q];
     const chosen = quiz.answers[it.q];
     $("#q-choices").innerHTML = it.o.map((orig, i) => {
       let cls = "choice";
       if (chosen === i) cls += " selected";
       if (fb) cls += i === fb.right ? " right" : chosen === i ? " wrong" : "";
-      return `<button type="button" class="${cls}" data-i="${i}" ${fb ? "disabled" : ""}><span class="key">${LETTERS[i]}</span><span>${esc(q.choices[orig])}</span></button>`;
+      return `<button type="button" class="${cls}" data-i="${i}" ${fb ? "disabled" : ""}><span class="key">${LETTERS[i]}</span><span>${esc(v.choices[orig])}</span></button>`;
     }).join("");
     const box = $("#q-feedback");
     if (fb) {
       box.className = "feedback " + (fb.ok ? "good" : "bad");
-      box.innerHTML = `<strong>${fb.ok ? "Bonne réponse" : `Raté : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${q.explanation ? `<span>${esc(q.explanation)}</span>` : ""}${q.guessed ? '<small>Réponse proposée par Claude, à vérifier avec ton cours.</small>' : ""}`;
+      box.innerHTML = `<strong>${fb.ok ? cheer() : `Pas tout à fait : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${v.explanation ? `<span>${esc(v.explanation)}</span>` : ""}${q.guessed ? '<small>Réponse proposée par Claude, à vérifier avec ton cours.</small>' : ""}`;
     } else box.className = "feedback hidden";
   }
+  const combo = quiz.combo || 0;
+  $("#quiz-combo").classList.toggle("hidden", exam || combo < 2);
+  $("#quiz-combo").textContent = `${combo} d'affilée !`;
   $("#q-flag").checked = !!quiz.flags[it.q];
   $("#q-prev").disabled = idx === 0;
   $("#q-next").textContent = idx === session.items.length - 1 ? (exam ? "Rendre ma copie" : "Voir le bilan") : "Suivante →";
@@ -1113,9 +1524,16 @@ $("#q-choices").addEventListener("click", (e) => {
     const right = it.o.indexOf(q.answer);
     quiz.feedback[it.q] = { ok: i === right, right };
     record(it.q, i === right);
+    quiz.combo = i === right ? (quiz.combo || 0) + 1 : 0;
+    if (i === right && quiz.combo % 5 === 0) confetti(60);
+    else if (i === right) confetti(14, b.getBoundingClientRect());
+    const goal = S.prog.goal || 40;
+    if (S.prog.days[today()] === goal) { confetti(140); toast(`Objectif du jour atteint : ${goal} questions !`); }
   }
   saveCur();
   renderQuestion();
+  const fbk = quiz.feedback[it.q];
+  if (fbk) document.querySelector(`#q-choices .choice[data-i="${fbk.ok ? i : i}"]`)?.classList.add(fbk.ok ? "pop" : "shake");
 });
 $("#quiz-grid").addEventListener("click", (e) => { if (e.target.dataset.go !== undefined) { quiz.idx = Number(e.target.dataset.go); saveCur(); renderQuestion(); } });
 $("#q-flag").addEventListener("change", (e) => { quiz.flags[quiz.session.items[quiz.idx].q] = e.target.checked; saveCur(); renderQuestion(); });
@@ -1172,29 +1590,31 @@ function renderResult(a) {
   const flags = new Set(a.flags || []);
   const wrongCount = details.filter((d) => !d.ok).length;
   const v = $("#view-result");
+  const mood = pct >= 0.8 ? "Excellent travail, tu maîtrises le sujet !" : pct >= 0.6 ? "Très bien, continue comme ça !" : pct >= 0.4 ? "Pas mal ! Revois tes erreurs, elles sont là pour ça." : "Chaque erreur corrigée maintenant, c'est un point gagné le jour J. On révise ?";
   v.innerHTML = `
-    <h1>${MODE_LABEL[a.mode]} terminé</h1>
+    <div class="hero"><div><h1>${MODE_LABEL[a.mode]} terminé</h1><p>${mood}</p></div></div>
     <div class="tiles">
-      <div class="tile ${pct >= 0.7 ? "good" : pct >= 0.5 ? "mid" : "bad"}"><b>${note20(a.score, a.total)} / 20</b><span>${a.score} bonnes réponses sur ${a.total}</span></div>
-      <div class="tile"><b>${minutes} min</b><span>temps passé</span></div>
-      <div class="tile"><b>${wrongCount}</b><span>erreurs ou sans réponse</span></div>
+      <div class="tile ${pct >= 0.7 ? "c-good" : pct >= 0.5 ? "c-sun" : "c-bad"}"><b>${note20(a.score, a.total)} / 20</b><span>${a.score} bonnes réponses sur ${a.total}</span></div>
+      <div class="tile c-violet"><b>${minutes} min</b><span>temps passé</span></div>
+      <div class="tile c-orange"><b>${wrongCount}</b><span>erreurs ou sans réponse</span></div>
     </div>
     <h2>Par thème</h2>
     <div class="bars">${Object.entries(byTopic).sort((x, y) => x[1].ok / x[1].total - y[1].ok / y[1].total).map(([t, o]) => bar(t, o.ok / o.total, `${o.ok} sur ${o.total}`)).join("")}</div>
-    <div class="row">${wrongCount ? '<button type="button" class="primary" id="res-review">Réviser mes erreurs</button>' : ""}<button type="button" data-goto="home">Retour à l'accueil</button></div>
+    <div class="row">${wrongCount ? '<button type="button" class="fun" id="res-review">Réviser mes erreurs</button>' : ""}<button type="button" data-goto="home">Retour à l'accueil</button></div>
     <div class="row between"><h2>Correction</h2><label class="flag" for="only-wrong"><input type="checkbox" id="only-wrong" checked> Seulement les erreurs</label></div>
     <div class="stack" id="corrs">${details.map((d, i) => `
       <div class="panel corr ${d.ok ? "ok" : "wrong"}">
-        <div class="qhead"><strong>Q${i + 1}</strong><span class="pill">${esc(d.q.topic)}</span>${flags.has(d.q.id) ? '<span class="pill amber">à revoir</span>' : ""}<span class="pill ${d.ok ? "good" : "bad"} push">${d.ok ? "Juste" : d.it.a === null ? "Sans réponse" : "Faux"}</span></div>
-        <p><strong>${esc(d.q.question)}</strong></p>
-        <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(d.q.choices[orig])}</span></li>`).join("")}</ul>
-        ${d.q.explanation ? `<p class="expl">${esc(d.q.explanation)}</p>` : ""}
+        <div class="qhead"><strong>Q${i + 1}</strong>${topicPill(d.q.topic)}${flags.has(d.q.id) ? '<span class="pill amber">à revoir</span>' : ""}<span class="pill ${d.ok ? "good" : "bad"} push">${d.ok ? "Juste" : d.it.a === null ? "Sans réponse" : "Faux"}</span></div>
+        <p><strong>${esc(shown(d.q).question)}</strong></p>
+        <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(shown(d.q).choices[orig])}</span></li>`).join("")}</ul>
+        ${shown(d.q).explanation ? `<p class="expl">${esc(shown(d.q).explanation)}</p>` : ""}
       </div>`).join("")}</div>`;
   setView("result");
   document.querySelectorAll("#nav button").forEach((b) => b.removeAttribute("aria-current"));
   const toggle = () => v.querySelectorAll(".corr.ok").forEach((el) => el.classList.toggle("hidden", $("#only-wrong").checked));
   $("#only-wrong").onchange = toggle;
   toggle();
+  if (pct >= 0.6 && Date.now() - a.finishedAt < 5000) confetti(pct >= 0.8 ? 180 : 90);
   const rb = $("#res-review");
   if (rb) rb.onclick = () => startQuiz("review", Math.min(20, wrongCount), []);
 }
@@ -1225,7 +1645,7 @@ function renderBank(reset) {
   $("#bank-list").insertAdjacentHTML("beforeend", page.map((q) => {
     const s = statOf(q.id);
     return `<div class="panel" data-q="${q.id}">
-      <div class="qhead"><span class="pill">${esc(q.topic)}</span><span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}
+      <div class="qhead">${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
       <p><strong>${esc(q.question)}</strong></p>
       <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
