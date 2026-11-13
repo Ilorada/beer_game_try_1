@@ -449,6 +449,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <button type="submit" class="fun" id="gen-btn"><svg><use href="#i-spark"/></svg>Créer les questions</button>
         <button type="button" id="gen-stop" class="hidden">Arrêter</button>
       </div>
+      <p class="hint">Les questions de tes quiz d'école servent de modèle : Claude écrit des questions du même style. Il ne pose jamais de question sur l'organisation du cours.</p>
       <p class="hint">Claude rédige les questions par lots de 20. Elles s'ajoutent à ta banque au fur et à mesure : tu peux t'entraîner pendant ce temps, mais garde cette page ouverte jusqu'à la fin. Compte environ une minute par lot. La création utilise ton forfait Claude.</p>
     </form>
     <div id="gen-progress" class="panel hidden">
@@ -539,7 +540,9 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option>
       </select>
     </div>
-    <p class="hint" id="bank-count"></p>
+    <div class="row between"><p class="hint" id="bank-count"></p>
+      <div class="row"><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
+    <div id="clean-panel" class="panel hidden"></div>
     <div id="bank-list" class="stack"></div>
     <div><button type="button" id="bank-more" class="hidden">Afficher plus</button></div>
   </section>
@@ -718,6 +721,20 @@ async function deleteQuestion(qid) {
   if (b.questions.length) await write(col("qbatches").doc(b.id), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(strip) });
   else { await write(col("qbatches").doc(b.id), "delete"); S.batches.delete(b.id); }
   reindex();
+}
+
+/** Supprime plusieurs questions en réécrivant une seule fois chaque document concerné. */
+async function deleteQuestions(ids) {
+  const set = new Set(ids);
+  const touched = new Set(ids.map((id) => S.qById.get(id)?.batchId).filter(Boolean));
+  for (const bid of touched) {
+    const b = S.batches.get(bid);
+    b.questions = b.questions.filter((x) => !set.has(x.id));
+    if (b.questions.length) await write(col("qbatches").doc(bid), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(({ batchId, sourceId, ...r }) => r) });
+    else { await write(col("qbatches").doc(bid), "delete"); S.batches.delete(bid); }
+  }
+  reindex();
+  return set.size;
 }
 
 // Statistiques par question : [vues, erreurs en cours], réparties sur 8 documents.
@@ -940,7 +957,22 @@ const LANG_RULE = {
   en: "Write the questions, the choices and the explanations in English, like the real exam.",
   fr: "Rédige les questions, les propositions et les explications en français.",
 };
-function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang = "same") {
+const SCOPE_RULE = [
+  "- UNIQUEMENT des questions de connaissances en supply chain et logistique : notions, méthodes, calculs, indicateurs, acteurs, cas pratiques.",
+  "- JAMAIS de question sur le cours ou le document lui-même : son plan, ses objectifs, « ce que l'on va étudier », le professeur, l'organisation des séances, l'évaluation, la bibliographie, les auteurs, le sommaire ou la mise en page.",
+  "- Si le passage n'est qu'un sommaire, une introduction ou des consignes, interroge sur les notions de supply chain qu'il cite, ou renvoie moins de questions.",
+].join("\n");
+// Questions des quiz de l'école, données comme modèles de style (même thème de cours en priorité).
+function quizExamples(themeId, n = 12) {
+  const all = S.questions.filter((q) => q.origin === "quiz");
+  if (!all.length) return "";
+  const same = shuffle(all.filter((q) => themeId && themeOfQ(q) === themeId));
+  const other = shuffle(all.filter((q) => !themeId || themeOfQ(q) !== themeId));
+  const pick = [...same, ...other].slice(0, n);
+  return "Voici des questions des quiz d'entraînement donnés par l'école. Inspire-toi de près de leur style, de leur niveau de difficulté, de leur longueur et du genre de notions qu'elles testent : l'examen leur ressemblera. Ne les recopie pas.\n" +
+    pick.map((q, i) => `${i + 1}. ${q.question}\n${q.choices.map((c, j) => `   ${LETTERS[j]}) ${c}`).join("\n")}\n   Réponse : ${LETTERS[q.answer]}`).join("\n");
+}
+function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang = "same", examples = "") {
   return [
     "Tu es un enseignant expert en supply chain et en logistique. Tu prépares un étudiant à un examen de 80 QCM en 3 heures.",
     `Rédige ${count} nouveaux QCM à partir du passage de cours ci-dessous.`,
@@ -954,7 +986,9 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
     "- pour un calcul, donne toutes les données et vérifie ton résultat ;",
     "- l'explication (2 à 4 phrases) dit pourquoi la bonne réponse est juste et pourquoi les autres sont fausses ;",
     "- environ 30 % de questions faciles, 50 % moyennes, 20 % difficiles ;",
-    "- reste fidèle au passage ; tu peux compléter avec des connaissances classiques de supply chain cohérentes avec lui.",
+    "- reste fidèle au passage ; tu peux compléter avec des connaissances classiques de supply chain cohérentes avec lui ;",
+    SCOPE_RULE,
+    examples,
     topicsHint(),
     existing.length ? "Questions déjà posées sur ce document, à ne pas répéter ni reformuler :\n" + existing.map((s) => "- " + s).join("\n") : "",
     `Réponds uniquement avec un objet JSON de cette forme : ${JSON_SHAPE}`,
@@ -970,6 +1004,7 @@ function extractionPrompt(chunk, sourceName) {
     "- Sinon, trouve la bonne réponse avec tes connaissances de supply chain, mets \"answerGuessed\": true et explique ton raisonnement.",
     "- Une question ouverte (sans propositions) devient un QCM de 4 propositions dont une seule juste, avec \"answerGuessed\": true.",
     "- Écris une courte explication pour chaque question, en français.",
+    "- Ignore les éventuelles questions qui ne portent pas sur des connaissances de supply chain (organisation du cours, présentation, consignes).",
     topicsHint(),
     `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false}]}`,
     'Si l\'extrait ne contient aucune question, réponds {"questions":[]}.',
@@ -1436,9 +1471,11 @@ function renderSources() {
   list.innerHTML = sorted.map((s) => {
     const n = S.questions.filter((q) => q.sourceId === s.id).length;
     return `<div><span class="grow"><strong>${esc(s.name)}</strong><small>${s.kind === "quiz" ? "Quiz" : "Cours"} · ${fr(Math.round(s.chars / 1000))} k caractères · ${fr(n)} questions</small></span>
+      <select class="small" data-setkind="${s.id}" aria-label="Type de ${esc(s.name)}" style="width:auto"><option value="course" ${s.kind !== "quiz" ? "selected" : ""}>Cours ou livre</option><option value="quiz" ${s.kind === "quiz" ? "selected" : ""}>Quiz</option></select>
       <select class="small" data-settheme="${s.id}" aria-label="Thème de ${esc(s.name)}" style="width:auto;max-width:220px">${themeOptions(s.themeId || "")}</select>
       ${s.kind === "quiz" ? `<button type="button" class="small" data-reextract="${s.id}">Relire avec Claude</button>` : ""}
-      <button type="button" class="small" data-delsrc="${s.id}">Supprimer</button></div>`;
+      ${n ? `<button type="button" class="small" data-delqs="${s.id}">Supprimer ses ${fr(n)} questions</button>` : ""}
+      <button type="button" class="small" data-delsrc="${s.id}">Supprimer le document</button></div>`;
   }).join("");
 }
 $("#theme-form").addEventListener("submit", (e) => {
@@ -1482,7 +1519,32 @@ $("#themes-list").addEventListener("submit", (e) => {
   if (t && v) { t.name = v; saveThemes(); }
   renderSources();
 });
-$("#sources-list").addEventListener("change", (e) => {
+$("#sources-list").addEventListener("change", async (e) => {
+  const kid = e.target.dataset.setkind;
+  if (kid) {
+    const src = S.sources.find((x) => x.id === kid);
+    const kind = e.target.value;
+    src.kind = kind;
+    write(col("sources").doc(kid), "update", { kind }).catch(() => {});
+    if (kind === "quiz") {
+      const made = S.questions.filter((q) => q.sourceId === kid && q.origin === "ia");
+      const ok = await ask(`« ${src.name} » est maintenant un quiz. ${made.length ? `Supprimer les ${made.length} questions que Claude avait créées à partir de ce document, et ` : ""}récupérer ses vraies questions telles quelles ?`, [["Non, juste changer le type", false], ["Oui", true]]);
+      if (ok) {
+        if (made.length) await deleteQuestions(made.map((q) => q.id));
+        renderSources();
+        const status = $("#upload-status");
+        try {
+          const chunks = (await chunksOf(kid)).map((c) => c.text);
+          let added = await addQuestions(parseQuizText(chunks.join("\n\n"), src.name.replace(/\.[^.]+$/, "")), kid, "quiz");
+          if (!added) added = await extractQuiz(kid, src.name, chunks, (m) => (status.textContent = m));
+          toast(`${added} questions récupérées dans « ${src.name} ».`);
+        } catch (err) { toast(err.message || err.code, true); }
+        status.textContent = "";
+      }
+    }
+    renderSources();
+    return;
+  }
   const id = e.target.dataset.settheme;
   if (!id) return;
   const src = S.sources.find((x) => x.id === id);
@@ -1491,7 +1553,16 @@ $("#sources-list").addEventListener("change", (e) => {
   renderSources();
 });
 $("#sources-list").addEventListener("click", async (e) => {
-  const del = e.target.dataset.delsrc, re = e.target.dataset.reextract;
+  const del = e.target.dataset.delsrc, re = e.target.dataset.reextract, dq = e.target.dataset.delqs;
+  if (dq) {
+    const src = S.sources.find((x) => x.id === dq);
+    const qs = S.questions.filter((q) => q.sourceId === dq);
+    if (!(await ask(`Supprimer les ${qs.length} questions issues de « ${src.name} » ? Le document est gardé.`, [["Annuler", false], ["Supprimer les questions", true]]))) return;
+    await deleteQuestions(qs.map((q) => q.id));
+    toast(`${qs.length} questions supprimées.`);
+    renderSources();
+    return;
+  }
   if (re) {
     const s = S.sources.find((x) => x.id === re);
     e.target.disabled = true;
@@ -1573,9 +1644,10 @@ $("#gen-form").addEventListener("submit", async (e) => {
       round++;
       const want = Math.min(20, target - done);
       const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
+      const examples = quizExamples(S.sources.find((x) => x.id === part.sourceId)?.themeId);
       setStatus(done, `Lot ${round} : ${part.name}, partie ${part.n + 1} (${angle.split(" (")[0]})…`);
       try {
-        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing, lang), { signal: genCtl.signal, modelTier: tier, cache: false });
+        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing, lang, examples), { signal: genCtl.signal, modelTier: tier, cache: false });
         const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4);
         const added = await addQuestions(list, part.sourceId, "ia");
         done += added;
@@ -1871,6 +1943,59 @@ function renderBank(reset) {
   $("#bank-more").classList.toggle("hidden", bankShown >= list.length);
   if (!list.length) $("#bank-list").innerHTML = `<p class="hint">Aucune question ici pour l'instant.</p>`;
 }
+$("#bank-delall").addEventListener("click", async () => {
+  const list = bankFiltered();
+  if (!list.length) return;
+  const all = list.length === S.questions.length;
+  if (!(await ask(`Supprimer ${all ? "TOUTES tes" : "les"} ${list.length} questions affichées${all ? "" : " (avec les filtres choisis)"} ? C'est définitif.`, [["Annuler", false], ["Supprimer", true]]))) return;
+  await deleteQuestions(list.map((q) => q.id));
+  toast(`${list.length} questions supprimées.`);
+  renderBank(true);
+});
+// Claude repère les questions qui ne testent pas la supply chain (« Qu'allons-nous étudier ? »…).
+let cleanCtl = null;
+$("#bank-clean").addEventListener("click", async () => {
+  if (!SAMPLE) return toast("Claude n'est pas disponible dans cette vue.", true);
+  const list = bankFiltered();
+  if (!list.length) return;
+  const panel = $("#clean-panel");
+  panel.classList.remove("hidden");
+  const found = [];
+  cleanCtl = new AbortController();
+  const btn = $("#bank-clean");
+  btn.disabled = true;
+  try {
+    for (let i = 0; i < list.length; i += 80) {
+      panel.innerHTML = `<strong>Claude relit tes questions : ${Math.min(i + 80, list.length)} sur ${list.length}…</strong><div><button type="button" class="small" id="clean-stop">Arrêter</button></div>`;
+      $("#clean-stop").onclick = () => cleanCtl.abort();
+      const part = list.slice(i, i + 80);
+      const r = await SAMPLE.json([
+        "Voici des QCM destinés à préparer un examen de supply chain. Repère ceux qui NE testent PAS une connaissance de supply chain ou de logistique :",
+        "questions sur le cours lui-même (plan, objectifs, « ce que l'on va étudier », professeur, séances, évaluation, bibliographie, auteurs, sommaire), questions de pure culture générale sans lien, ou questions incompréhensibles.",
+        "Une question de supply chain simple ou facile n'est PAS hors sujet.",
+        'Réponds uniquement avec un objet JSON : {"offTopic":[numéros des questions hors sujet]}',
+        "",
+        part.map((q, j) => `${j}. ${q.question}`).join("\n"),
+      ].join("\n"), { signal: cleanCtl.signal, cache: false });
+      for (const n of Array.isArray(r?.offTopic) ? r.offTopic : []) if (part[Number(n)]) found.push(part[Number(n)]);
+    }
+  } catch (e) {
+    if (e?.code !== "cancelled") toast(SAMPLE_ERRORS[e?.code] || "Relecture interrompue.", true);
+  }
+  btn.disabled = false;
+  cleanCtl = null;
+  if (!found.length) { panel.innerHTML = `<strong>Aucune question hors sujet trouvée.</strong>`; return; }
+  panel.innerHTML = `<strong>${found.length} question${found.length > 1 ? "s" : ""} hors sujet trouvée${found.length > 1 ? "s" : ""}.</strong><span class="hint">Décoche celles que tu veux garder.</span>
+    <div class="stack">${found.map((q) => `<label class="flag" style="color:var(--ink)"><input type="checkbox" name="cleanq" value="${q.id}" checked> ${esc(q.question)}</label>`).join("")}</div>
+    <div class="row"><button type="button" class="primary" id="clean-go">Supprimer les questions cochées</button><button type="button" id="clean-cancel">Annuler</button></div>`;
+  $("#clean-cancel").onclick = () => panel.classList.add("hidden");
+  $("#clean-go").onclick = async () => {
+    const ids = [...document.querySelectorAll('input[name="cleanq"]:checked')].map((c) => c.value);
+    await deleteQuestions(ids);
+    panel.innerHTML = `<strong>${ids.length} question${ids.length > 1 ? "s" : ""} supprimée${ids.length > 1 ? "s" : ""}.</strong>`;
+    renderBank(true);
+  };
+});
 let bankT;
 $("#bank-search").addEventListener("input", () => { clearTimeout(bankT); bankT = setTimeout(() => renderBank(true), 250); });
 $("#bank-topic").addEventListener("change", () => renderBank(true));
