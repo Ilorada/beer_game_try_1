@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="noel">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -58,6 +58,35 @@
   --shadow: 0 8px 24px -12px rgba(0, 0, 0, .6);
   color-scheme: dark;
 }
+/* Ambiance de Noël : vert sapin, rouge canneberge, or. Désactivable dans « Mes réglages ». */
+:root.noel {
+  --bg: #f3f6f1; --teal: #1d7a4c; --teal-deep: #13583a; --teal-soft: #dcefe3;
+  --orange: #d93a3a; --orange-soft: #fbe3e1; --sun: #d29b12; --sun-soft: #fbf1d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root.noel:not([data-theme="light"]) { --bg: #0e1a14; --teal: #4cc488; --teal-deep: #8fe0b4; --teal-soft: #173a2a; --orange: #ff6b6b; --orange-soft: #3d1f1f; --sun: #f2c14e; --sun-soft: #3a3214; }
+}
+:root.noel[data-theme="dark"] { --bg: #0e1a14; --teal: #4cc488; --teal-deep: #8fe0b4; --teal-soft: #173a2a; --orange: #ff6b6b; --orange-soft: #3d1f1f; --sun: #f2c14e; --sun-soft: #3a3214; }
+.noel header { position: sticky; }
+.noel header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 12px; pointer-events: none;
+  background:
+    radial-gradient(circle, #ffd54a 0 3.5px, transparent 4.5px) 0 0 / 42px 12px repeat-x,
+    radial-gradient(circle, #ff5252 0 3.5px, transparent 4.5px) 14px 0 / 42px 12px repeat-x,
+    radial-gradient(circle, #e8f5ff 0 3.5px, transparent 4.5px) 28px 0 / 42px 12px repeat-x;
+  animation: twinkle 2.6s ease-in-out infinite alternate; }
+@keyframes twinkle { from { opacity: .55; } to { opacity: 1; } }
+#snow { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+main { position: relative; z-index: 1; }
+html:not(.noel) #snow, html:not(.noel) #tree-svg, .noel #ring-svg { display: none; }
+.noel .ring { height: auto; }
+.noel .ring .ring-txt { position: static; margin-top: 2px; }
+#tree-svg { width: 100%; height: auto; transform: none; overflow: visible; }
+#tree-svg .orn { transition: fill .4s, r .4s; }
+#tree-svg .orn.new { animation: bauble .7s ease-out; transform-box: fill-box; transform-origin: center; }
+@keyframes bauble { 0% { transform: scale(.2); } 60% { transform: scale(1.5); } 100% { transform: scale(1); } }
+#tree-star { transition: fill .5s; transform-box: fill-box; transform-origin: center; }
+#tree-star.on { fill: #ffd54a; filter: drop-shadow(0 0 6px #ffd54a); animation: starglow 2s ease-in-out infinite alternate; }
+@keyframes starglow { from { transform: scale(1); } to { transform: scale(1.12); } }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 17px/1.5 var(--font-body); }
@@ -299,6 +328,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
   .hero h1 { font-size: 24px; }
   .hero .cta { grid-column: 1 / -1; margin-top: 4px; }
   .ring { width: 92px; height: 92px; align-self: start; }
+  .noel .ring { width: 96px; }
   .ring b { font-size: 22px; }
   .ring small { font-size: 10px; max-width: 64px; margin: 0 auto; }
   .bar { grid-template-columns: 1fr 1fr 46px; }
@@ -353,7 +383,16 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <p id="hero-sub">Dépose tes cours, laisse Claude en tirer des QCM, puis entraîne-toi pour l'examen : 80 questions en 3 heures.</p>
       </div>
       <div class="ring" aria-label="Objectif du jour">
-        <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="12"/><circle id="ring-arc" cx="60" cy="60" r="50" fill="none" stroke="#f5b400" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+        <svg id="tree-svg" viewBox="0 0 120 150" aria-hidden="true">
+          <rect x="52" y="122" width="16" height="18" rx="3" fill="#8b5a2b"/>
+          <polygon points="60,22 22,74 98,74" fill="#2f9e5f"/>
+          <polygon points="60,44 14,104 106,104" fill="#268a52"/>
+          <polygon points="60,66 8,128 112,128" fill="#1f7a47"/>
+          <path d="M28 96 Q60 108 94 92 M20 120 Q60 132 102 116" stroke="#ffd54a" stroke-width="2" fill="none" opacity=".7" stroke-dasharray="3 4"/>
+          <g id="tree-orns"></g>
+          <polygon id="tree-star" points="60,4 64.7,15.5 77,16.2 67.5,24 70.6,36 60,29.4 49.4,36 52.5,24 43,16.2 55.3,15.5" fill="rgba(255,255,255,.35)"/>
+        </svg>
+        <svg id="ring-svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="12"/><circle id="ring-arc" cx="60" cy="60" r="50" fill="none" stroke="#f5b400" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
         <div class="ring-txt"><b id="ring-num">0</b><small id="ring-of">sur 40 aujourd'hui</small></div>
       </div>
       <div class="cta">
@@ -372,6 +411,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <label class="field" for="exam-date">Date de mon examen<input type="date" id="exam-date"></label>
         <label class="field" for="daily-goal">Objectif : questions par jour<input type="number" id="daily-goal" min="5" max="500" step="5" value="40"></label>
       </div>
+      <label class="flag" for="noel-toggle" style="color:var(--ink)"><input type="checkbox" id="noel-toggle" checked> Ambiance de Noël (neige, sapin, guirlande)</label>
     </div>
     <h2>Par où commencer</h2>
     <ol class="steps" id="home-steps">
@@ -594,6 +634,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
   <span id="dp-def"></span>
   <small id="dp-ex"></small>
 </div>
+<canvas id="snow" aria-hidden="true"></canvas>
 <canvas id="confetti" aria-hidden="true"></canvas>
 <dialog id="dlg"><p id="dlg-text"></p><div class="row" id="dlg-btns"></div></dialog>
 <div id="toast" class="toast hidden" role="status"></div>
@@ -1392,13 +1433,57 @@ $("#bank-verify").addEventListener("click", async (e) => {
 // Encouragements et confettis
 // ======================================================================
 const CHEERS = ["Bonne réponse !", "Exact, bien joué !", "Parfait !", "Oui, c'est ça !", "Excellent !", "Bravo !"];
-const cheer = () => CHEERS[Math.floor(Math.random() * CHEERS.length)];
+const NOEL_CHEERS = ["Ho ho ho, c'est juste !", "Bravo, une boule de plus sur le sapin !", "Un vrai cadeau, cette réponse !", "Exact ! Le père Noël est fier de toi."];
+const isNoel = () => document.documentElement.classList.contains("noel");
+const cheer = () => { const l = isNoel() && Math.random() < 0.3 ? NOEL_CHEERS : CHEERS; return l[Math.floor(Math.random() * l.length)]; };
+
+// Sapin du jour : 10 boules s'allument au fil des questions, l'étoile quand l'objectif est atteint.
+const ORNS = [[60, 40, "#ff5252"], [46, 58, "#ffd54a"], [74, 62, "#e8f5ff"], [40, 84, "#ff5252"], [62, 80, "#ffd54a"], [84, 90, "#e8f5ff"], [30, 112, "#ffd54a"], [52, 106, "#e8f5ff"], [74, 114, "#ff5252"], [94, 118, "#ffd54a"]];
+let treeLit = -1;
+function renderTree(done, goal) {
+  const lit = Math.min(ORNS.length, Math.floor((ORNS.length * done) / goal));
+  $("#tree-orns").innerHTML = ORNS.map(([x, y, c], i) => `<circle class="orn${treeLit >= 0 && i < lit && i >= treeLit ? " new" : ""}" cx="${x}" cy="${y}" r="${i < lit ? 5.5 : 3.5}" fill="${i < lit ? c : "rgba(255,255,255,.28)"}"/>`).join("");
+  $("#tree-star").classList.toggle("on", done >= goal);
+  treeLit = lit;
+}
+
+// Neige légère derrière les cartes (coupée si l'ambiance est désactivée ou si le système limite les animations).
+let snowOn = false;
+function startSnow() {
+  if (snowOn || !isNoel() || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  snowOn = true;
+  const cv = $("#snow"), ctx = cv.getContext("2d");
+  const flakes = Array.from({ length: Math.min(45, Math.round(innerWidth / 28)) }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.4, v: 0.15 + Math.random() * 0.35, d: Math.random() * 6 }));
+  const dark = () => getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0, 3).reduce((a, b) => a + Number(b), 0) < 300;
+  let tint = dark() ? "rgba(255,255,255,.75)" : "rgba(170,195,215,.75)";
+  (function frame(t) {
+    if (!snowOn) { ctx.clearRect(0, 0, cv.width, cv.height); return; }
+    if (cv.width !== innerWidth || cv.height !== innerHeight) { cv.width = innerWidth; cv.height = innerHeight; tint = dark() ? "rgba(255,255,255,.75)" : "rgba(170,195,215,.75)"; }
+    if (!document.hidden) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = tint;
+      for (const f of flakes) {
+        f.y += f.v / cv.height * 3; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+        const x = f.x * cv.width + Math.sin(t / 1600 + f.d) * 14;
+        ctx.beginPath(); ctx.arc(x, f.y * cv.height, f.r, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    requestAnimationFrame(frame);
+  })(0);
+}
+function setNoel(on) {
+  document.documentElement.classList.toggle("noel", on);
+  $("#noel-toggle").checked = on;
+  if (on) startSnow(); else snowOn = false;
+}
+$("#noel-toggle").addEventListener("change", (e) => { S.prog.noel = e.target.checked; saveProgress(); setNoel(e.target.checked); renderHome(); });
 function confetti(n = 80, rect = null) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const cv = $("#confetti");
   const ctx = cv.getContext("2d");
   cv.width = innerWidth; cv.height = innerHeight;
-  const colors = ["#0e9f8e", "#ff7a45", "#f5b400", "#6c5ce7", "#ef4f86", "#16a35a"];
+  const noel = isNoel();
+  const colors = noel ? ["#d93a3a", "#1d7a4c", "#ffd54a", "#ffffff", "#e8f5ff", "#ff5252"] : ["#0e9f8e", "#ff7a45", "#f5b400", "#6c5ce7", "#ef4f86", "#16a35a"];
   const x0 = rect ? rect.left + rect.width / 2 : innerWidth / 2, y0 = rect ? rect.top + rect.height / 2 : innerHeight / 3;
   const parts = Array.from({ length: n }, () => ({
     x: x0, y: y0, vx: (Math.random() - 0.5) * (rect ? 8 : 16), vy: -Math.random() * (rect ? 7 : 14) - 2,
@@ -1409,7 +1494,10 @@ function confetti(n = 80, rect = null) {
     ctx.clearRect(0, 0, cv.width, cv.height);
     for (const p of parts) {
       p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.r += 0.2;
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore();
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
+      if (noel && p.s > 6.5) { ctx.strokeStyle = p.c; ctx.lineWidth = 1.6; for (let k = 0; k < 3; k++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(-p.s / 1.4, 0); ctx.lineTo(p.s / 1.4, 0); ctx.stroke(); } }
+      else ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      ctx.restore();
     }
     if (++frame < (rect ? 45 : 110)) requestAnimationFrame(step); else ctx.clearRect(0, 0, cv.width, cv.height);
   })();
@@ -1461,7 +1549,12 @@ function renderHome() {
   $("#ring-arc").style.strokeDashoffset = String(314.16 * (1 - Math.min(1, done / goal)));
   $("#ring-arc").setAttribute("stroke", done >= goal ? "#5ee3a1" : "#f5b400");
   const h = new Date().getHours();
-  $("#home-title").textContent = done >= goal ? "Objectif du jour atteint, bravo !" : h < 12 ? "Bonjour ! On révise la supply chain ?" : h < 18 ? "Bon après-midi ! Une petite série ?" : "Bonsoir ! Encore quelques questions ?";
+  const noel = isNoel();
+  renderTree(done, goal);
+  $("#home-title").textContent = done >= goal
+    ? (noel ? "L'étoile brille : objectif du jour atteint !" : "Objectif du jour atteint, bravo !")
+    : noel ? (h < 12 ? "Bonjour ! On décore le sapin ?" : h < 18 ? "Une petite série avant le chocolat chaud ?" : "Bonsoir ! Encore quelques boules sur le sapin ?")
+    : h < 12 ? "Bonjour ! On révise la supply chain ?" : h < 18 ? "Bon après-midi ! Une petite série ?" : "Bonsoir ! Encore quelques questions ?";
   $("#hero-sub").textContent = j !== null && j >= 0
     ? (j === 0 ? "C'est le jour de l'examen. Tu as bien travaillé, fais-toi confiance !" : `Plus que ${j} jour${j > 1 ? "s" : ""} avant l'examen. ${done >= goal ? "Tu peux continuer pour prendre de l'avance." : `Encore ${goal - done} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour.`}`)
     : S.questions.length ? `Encore ${Math.max(0, goal - done)} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour. Indique la date de ton examen plus bas pour voir le compte à rebours.` : "Dépose tes cours, laisse Claude en tirer des QCM, puis entraîne-toi pour l'examen : 80 questions en 3 heures.";
@@ -1471,6 +1564,7 @@ function renderHome() {
     <div class="tile c-teal">${tileIco("i-book")}<b>${fr(S.questions.length)}</b><span>questions dans ta banque</span></div>
     <div class="tile ${lastPct === null ? "c-sun" : lastPct >= 0.7 ? "c-good" : lastPct >= 0.5 ? "c-sun" : "c-bad"}">${tileIco("i-chart")}<b>${last ? note20(last.score, last.total) : "–"}</b><span>dernier examen blanc, sur 20</span></div>`;
   $("#exam-date").value = S.prog.examDate || "";
+  $("#noel-toggle").checked = isNoel();
   $("#daily-goal").value = goal;
   $("#step-1").classList.toggle("done", S.sources.length > 0);
   $("#step-2").classList.toggle("done", S.questions.some((q) => q.origin === "ia"));
@@ -1975,7 +2069,8 @@ $("#q-choices").addEventListener("click", (e) => {
     if (i === right && quiz.combo % 5 === 0) confetti(60);
     else if (i === right) confetti(14, b.getBoundingClientRect());
     const goal = S.prog.goal || 40;
-    if (S.prog.days[today()] === goal) { confetti(140); toast(`Objectif du jour atteint : ${goal} questions !`); }
+    if (S.prog.days[today()] === goal) { confetti(140); toast(isNoel() ? `Ho ho ho ! Objectif atteint : l'étoile du sapin est allumée (${goal} questions).` : `Objectif du jour atteint : ${goal} questions !`); }
+    else if (isNoel() && S.prog.days[today()] % Math.max(1, Math.round(goal / 10)) === 0 && S.prog.days[today()] < goal) toast("Une nouvelle boule sur ton sapin !");
   }
   saveCur();
   renderQuestion();
@@ -2203,6 +2298,7 @@ $("#history").addEventListener("click", (e) => { const id = e.target.dataset.ope
     DB = db;
     ROOT = db.doc(`data/users/${uid}/app`);
     await loadAll();
+    setNoel(S.prog.noel !== false);
     msg.remove();
     if (!SAMPLE) {
       const n = document.createElement("div");
