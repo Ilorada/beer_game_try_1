@@ -135,6 +135,7 @@ main { max-width: 1010px; margin: 0 auto; padding: 22px 16px 90px; }
 
 /* Formulaires et boutons */
 label.field { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 15px; flex: 1 1 200px; }
+.panel > label.field, .stack > label.field, form > label.field { flex: none; }
 input[type=text], input[type=number], input[type=search], input[type=date], select, textarea {
   width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; font: 400 16px var(--font-body); background: var(--surface); color: var(--ink);
 }
@@ -246,6 +247,21 @@ button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; backgroun
 .word .w-en { font: 600 20px var(--font-display); }
 .word .w-fr { font-weight: 800; color: var(--c, var(--violet)); }
 
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.theme-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; border-left: 7px solid var(--c, var(--teal)); }
+.theme-card h3 { color: var(--c); }
+.theme-card .row { gap: 8px; }
+.panel.inset { background: var(--bg); box-shadow: none; }
+.group { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); }
+.group:first-child { border-top: 0; }
+.group > label { font-weight: 800; display: flex; gap: 8px; align-items: center; }
+.flash { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); padding: 28px 22px; min-height: 230px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; border-top: 7px solid var(--c, var(--violet)); }
+.flash .w-en { font: 600 34px var(--font-display); }
+.flash .w-fr { font: 600 24px var(--font-display); color: var(--c, var(--violet)); }
+.tq { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tq > div { display: flex; flex-direction: column; gap: 4px; }
+.tq .lang { font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+@media (max-width: 720px) { .tq { grid-template-columns: 1fr; } }
 .log { font-size: 14px; color: var(--muted); max-height: 160px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 
 /* Bulle de traduction d'un mot */
@@ -307,7 +323,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     </div>
     <nav id="nav" aria-label="Sections">
       <button type="button" data-view="home" aria-current="page"><svg><use href="#i-home"/></svg>Accueil</button>
-      <button type="button" data-view="sources"><svg><use href="#i-doc"/></svg>Docs</button>
+      <button type="button" data-view="sources"><svg><use href="#i-doc"/></svg>Thèmes</button>
       <button type="button" data-view="generate"><svg><use href="#i-spark"/></svg>Créer</button>
       <button type="button" data-view="practice"><svg><use href="#i-target"/></svg>Réviser</button>
       <button type="button" data-view="exam"><svg><use href="#i-clock"/></svg>Examen</button>
@@ -356,19 +372,32 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <li id="step-3" class="c-sun"><strong>Entraîne-toi</strong><span class="hint">Par thème, avec la correction après chaque réponse.</span><button type="button" class="link" data-goto="practice">S'entraîner</button></li>
       <li id="step-4" class="c-violet"><strong>Passe un examen blanc</strong><span class="hint">80 questions, chrono de 3 h, note sur 20.</span><button type="button" class="link" data-goto="exam">Examen blanc</button></li>
     </ol>
-    <h2>Mes thèmes à retravailler</h2>
+    <h2>Mes thèmes de cours</h2>
+    <div id="home-themes" class="themes"></div>
+    <h2>Mes notions à retravailler</h2>
     <div id="home-topics" class="bars panel"></div>
   </section>
 
   <!-- DOCUMENTS -->
   <section id="view-sources" class="view" aria-labelledby="src-title">
-    <div class="page-title"><span class="ico c-teal" style="background:var(--cs);color:var(--c)"><svg><use href="#i-doc"/></svg></span><h1 id="src-title">Mes documents</h1></div>
+    <div class="page-title"><span class="ico c-teal" style="background:var(--cs);color:var(--c)"><svg><use href="#i-doc"/></svg></span><h1 id="src-title">Mes thèmes et documents</h1></div>
+    <div class="panel">
+      <h2>Mes thèmes de cours</h2>
+      <p class="hint">Crée un thème par chapitre vu en classe (par exemple tes 12 thèmes), puis range chaque document dans son thème. Tu pourras ensuite réviser thème par thème.</p>
+      <form id="theme-form" class="row">
+        <input type="text" id="theme-name" placeholder="ex. Thème 3 : gestion des stocks" style="flex:1 1 240px;width:auto" aria-label="Nom du thème" maxlength="60">
+        <button type="submit" class="primary">Créer le thème</button>
+      </form>
+      <div id="themes-list" class="themes"></div>
+    </div>
+    <h2>Ajouter des documents</h2>
     <form id="upload-form" class="panel">
       <div class="seg" role="radiogroup" aria-label="Type de document">
         <label><input type="radio" name="kind" value="course" checked> Un cours ou un livre</label>
         <label><input type="radio" name="kind" value="quiz"> Un quiz (questions d'entraînement)</label>
       </div>
       <p class="hint" id="kind-hint">Claude s'en servira pour créer de nouvelles questions.</p>
+      <label class="field" for="up-theme" style="max-width:420px">Ranger dans le thème<select id="up-theme"></select></label>
       <label class="drop" id="drop" for="file-input">
         <svg><use href="#i-upload"/></svg>
         <strong>Clique ici ou dépose tes fichiers</strong>
@@ -387,6 +416,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <div id="upload-log" class="log"></div>
     </form>
     <p class="hint">Un PDF scanné (une photo de page, sans texte sélectionnable) ne peut pas être lu. Un très gros livre prend une ou deux minutes à importer.</p>
+    <h2>Mes documents</h2>
     <div id="sources-list" class="list"></div>
   </section>
 
@@ -438,9 +468,13 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       </div>
       <label class="field" for="pr-count" style="max-width:240px">Nombre de questions<input type="number" id="pr-count" value="20" min="1" max="500"></label>
       <fieldset>
-        <legend>Thèmes (aucun coché = tous)</legend>
-        <div id="pr-topics" class="checks"></div>
+        <legend>Thèmes de cours (aucun coché = tous)</legend>
+        <div id="pr-themes" class="checks"></div>
       </fieldset>
+      <details>
+        <summary>Choisir des notions plus précises</summary>
+        <div id="pr-topics" class="checks" style="margin-top:10px"></div>
+      </details>
       <div><button type="submit" class="primary"><svg><use href="#i-target"/></svg>C'est parti</button></div>
     </form>
   </section>
@@ -455,6 +489,10 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <label class="field" for="ex-min">Durée en minutes<input type="number" id="ex-min" value="180" min="1" max="600"></label>
       </div>
       <p class="hint" id="ex-pace">Soit 2 min 15 s par question.</p>
+      <fieldset>
+        <legend>Thèmes au programme (aucun coché = tous)</legend>
+        <div id="ex-themes" class="checks"></div>
+      </fieldset>
       <div><button type="submit" class="violet"><svg><use href="#i-clock"/></svg>Démarrer l'examen</button></div>
     </form>
   </section>
@@ -495,7 +533,8 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     <div class="page-title"><span class="ico c-pink" style="background:var(--cs);color:var(--c)"><svg><use href="#i-book"/></svg></span><h1 id="bank-title">Mes questions</h1></div>
     <div class="row">
       <input type="search" id="bank-search" placeholder="Rechercher un mot" style="flex:2 1 200px;width:auto" aria-label="Rechercher">
-      <select id="bank-topic" style="flex:1 1 160px;width:auto" aria-label="Thème"></select>
+      <select id="bank-theme" style="flex:1 1 160px;width:auto" aria-label="Thème de cours"></select>
+      <select id="bank-topic" style="flex:1 1 160px;width:auto" aria-label="Notion"></select>
       <select id="bank-filter" style="flex:1 1 140px;width:auto" aria-label="Filtre">
         <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option>
       </select>
@@ -515,8 +554,17 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <button type="submit" class="violet">Traduire</button>
       </div>
     </form>
-    <input type="search" id="lex-filter" placeholder="Chercher dans mon lexique" aria-label="Chercher dans mon lexique">
-    <div id="lex-list" class="words"></div>
+    <div class="seg" role="radiogroup" aria-label="Partie du lexique">
+      <label><input type="radio" name="lexmode" value="words" checked> Mes mots <span class="pill c-violet" id="lex-n-words">0</span></label>
+      <label><input type="radio" name="lexmode" value="questions"> Questions traduites <span class="pill c-teal" id="lex-n-q">0</span></label>
+      <label><input type="radio" name="lexmode" value="flash"> Réviser mes mots</label>
+    </div>
+    <div id="lex-words" class="stack">
+      <input type="search" id="lex-filter" placeholder="Chercher dans mon lexique" aria-label="Chercher dans mon lexique">
+      <div id="lex-list" class="words"></div>
+    </div>
+    <div id="lex-questions" class="stack hidden"></div>
+    <div id="lex-flash" class="stack hidden"></div>
   </section>
 
   <!-- HISTORIQUE -->
@@ -585,7 +633,7 @@ function ask(text, buttons = [["Annuler", false], ["OK", true]]) {
 // Stockage : chaque personne a son espace privé dans la base de l'artefact.
 // ======================================================================
 let DB = null, ROOT = null;
-const S = { sources: [], batches: new Map(), questions: [], qById: new Map(), stats: {}, attempts: [], cur: null, dict: {}, prog: { days: {}, goal: 40, examDate: "", showFr: false } };
+const S = { sources: [], batches: new Map(), questions: [], qById: new Map(), stats: {}, attempts: [], cur: null, themes: [], dict: {}, prog: { days: {}, goal: 40, examDate: "", showFr: false } };
 const STAT_SHARDS = 8;
 
 const chains = new Map();
@@ -620,6 +668,8 @@ async function loadAll() {
   S.cur = cur?.data()?.quiz ? structuredClone(cur.data().quiz) : null;
   const dict = misc.docs.find((d) => d.id === "dict");
   S.dict = dict ? structuredClone(dict.data().words || {}) : {};
+  const th = misc.docs.find((d) => d.id === "themes");
+  S.themes = th ? structuredClone(th.data().list || []) : [];
   const prog = misc.docs.find((d) => d.id === "progress");
   if (prog) Object.assign(S.prog, structuredClone(prog.data()));
   reindex();
@@ -713,6 +763,19 @@ const statOf = (qid) => S.stats[qid] || [0, 0];
 const TOPIC_COLORS = ["c-teal", "c-orange", "c-violet", "c-pink", "c-sun", "c-good"];
 const topicClass = (t) => { let h = 0; for (const c of String(t)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return TOPIC_COLORS[h % TOPIC_COLORS.length]; };
 const topicPill = (t) => `<span class="pill ${topicClass(t)}">${esc(t)}</span>`;
+// Thèmes de cours : chaque document est rangé dans un thème ; ses questions en héritent.
+const themeById = (id) => S.themes.find((t) => t.id === id);
+const themeClass = (id) => TOPIC_COLORS[Math.max(0, S.themes.findIndex((t) => t.id === id)) % TOPIC_COLORS.length];
+const themeOfQ = (q) => S.sources.find((x) => x.id === q.sourceId)?.themeId || "";
+const themePill = (id) => { const t = themeById(id); return t ? `<span class="pill ${themeClass(id)}">${esc(t.name)}</span>` : ""; };
+const saveThemes = () => write(col("misc").doc("themes"), "set", { list: S.themes }).catch(() => {});
+function themeChecks(name, checkedIds = []) {
+  if (!S.themes.length) return `<span class="hint">Aucun thème pour l'instant : crée-les dans l'onglet « Thèmes ».</span>`;
+  return S.themes.map((t) => {
+    const n = S.questions.filter((q) => themeOfQ(q) === t.id).length;
+    return `<label class="${themeClass(t.id)}"><input type="checkbox" name="${name}" value="${t.id}" ${checkedIds.includes(t.id) ? "checked" : ""}> ${esc(t.name)} <small>(${n})</small></label>`;
+  }).join("");
+}
 
 // Série en cours, enregistrée pour pouvoir la reprendre (même sur un autre appareil).
 let curTimer = null;
@@ -1004,8 +1067,10 @@ async function lookupWord(word, context = "") {
   pop.classList.remove("hidden");
   pop.className = topicClass(key);
   $("#dp-en").textContent = word.trim();
-  if (S.dict[key]) return showEntry(S.dict[key]);
-  if (!SAMPLE) { $("#dp-fr").textContent = "Claude n'est pas disponible dans cette vue."; $("#dp-def").textContent = ""; $("#dp-ex").textContent = ""; return; }
+  if (S.dict[key] && !S.dict[key].pending) return showEntry(S.dict[key]);
+  // Le mot est gardé dans le lexique tout de suite, même si la traduction échoue.
+  if (!S.dict[key]) { S.dict[key] = { en: word.trim(), fr: "", definition: "", example: "", pending: true, at: Date.now() }; saveDict(); }
+  if (!SAMPLE) { $("#dp-fr").textContent = "Claude n'est pas disponible dans cette vue : le mot est gardé dans ton lexique, à traduire plus tard."; $("#dp-def").textContent = ""; $("#dp-ex").textContent = ""; return; }
   $("#dp-fr").textContent = "Recherche…";
   $("#dp-def").textContent = ""; $("#dp-ex").textContent = "";
   try {
@@ -1017,12 +1082,12 @@ async function lookupWord(word, context = "") {
       "Si le mot est déjà en français, donne son équivalent anglais dans « fr » et explique-le quand même.",
       'Réponds uniquement avec un objet JSON : {"fr":"…","definition":"…","example":"…"}',
     ].filter(Boolean).join("\n"), { modelTier: "quick" });
-    const entry = { en: word.trim(), fr: String(r?.fr || "?"), definition: String(r?.definition || ""), example: String(r?.example || ""), at: Date.now() };
+    const entry = { en: word.trim(), fr: String(r?.fr || "?"), definition: String(r?.definition || ""), example: String(r?.example || ""), at: S.dict[key]?.at || Date.now(), known: 0 };
     S.dict[key] = entry;
     saveDict();
     if (wordKey($("#dp-en").textContent) === key) showEntry(entry);
   } catch (e) {
-    $("#dp-fr").textContent = e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Traduction impossible pour le moment.";
+    $("#dp-fr").textContent = (e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Traduction impossible pour le moment.") + " Le mot est gardé dans ton lexique : tu pourras le retraduire.";
   }
 }
 function showEntry(e) {
@@ -1062,13 +1127,72 @@ document.addEventListener("selectionchange", () => { if (!window.getSelection()?
 selBtn.addEventListener("mousedown", (e) => e.preventDefault());
 selBtn.addEventListener("click", () => { selBtn.classList.add("hidden"); lookupWord(selWord, selContext); });
 
+const lexMode = () => document.querySelector('input[name="lexmode"]:checked').value;
 function renderLexicon() {
-  const f = wordKey($("#lex-filter").value);
-  const list = Object.entries(S.dict).filter(([k, e]) => !f || k.includes(f) || wordKey(e.fr).includes(f)).sort((a, b) => b[1].at - a[1].at);
-  $("#lex-list").innerHTML = list.length
-    ? list.map(([k, e]) => `<div class="word ${topicClass(k)}"><span class="w-en">${esc(e.en)}</span><span class="w-fr">${esc(e.fr)}</span><span>${esc(e.definition)}</span>${e.example ? `<small>${esc(e.example)}</small>` : ""}<div><button type="button" class="small" data-delword="${esc(k)}">Retirer</button></div></div>`).join("")
-    : `<p class="hint">Ton lexique est vide. Pendant un quiz, sélectionne un mot ou tape-le pour le traduire : il s'ajoutera ici.</p>`;
+  const words = Object.entries(S.dict);
+  const translated = S.questions.filter((q) => q.fr);
+  $("#lex-n-words").textContent = words.length;
+  $("#lex-n-q").textContent = translated.length;
+  const mode = lexMode();
+  $("#lex-words").classList.toggle("hidden", mode !== "words");
+  $("#lex-questions").classList.toggle("hidden", mode !== "questions");
+  $("#lex-flash").classList.toggle("hidden", mode !== "flash");
+  if (mode === "words") {
+    const f = wordKey($("#lex-filter").value);
+    const list = words.filter(([k, e]) => !f || k.includes(f) || wordKey(e.fr || "").includes(f)).sort((a, b) => b[1].at - a[1].at);
+    $("#lex-list").innerHTML = list.length
+      ? list.map(([k, e]) => `<div class="word ${topicClass(k)}"><span class="w-en">${esc(e.en)}</span>${e.pending ? '<span class="pill amber">pas encore traduit</span>' : `<span class="w-fr">${esc(e.fr)}</span><span>${esc(e.definition)}</span>${e.example ? `<small>${esc(e.example)}</small>` : ""}`}<div class="row">${e.pending ? `<button type="button" class="small primary" data-retry="${esc(k)}">Traduire</button>` : ""}<button type="button" class="small" data-delword="${esc(k)}">Retirer</button></div></div>`).join("")
+      : `<p class="hint">Ton lexique est vide. Pendant un quiz, sélectionne un mot ou tape-le pour le traduire : il s'ajoutera ici automatiquement.</p>`;
+  } else if (mode === "questions") {
+    $("#lex-questions").innerHTML = translated.length
+      ? translated.map((q) => `<div class="panel"><div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}</div><div class="tq">
+          <div><span class="lang">Anglais</span><strong>${esc(q.question)}</strong><ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul></div>
+          <div><span class="lang">Français</span><strong>${esc(q.fr.question)}</strong><ul class="opts">${q.fr.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul></div>
+        </div>${q.fr.explanation ? `<p class="expl">${esc(q.fr.explanation)}</p>` : ""}</div>`).join("")
+      : `<p class="hint">Aucune question traduite pour l'instant. Pendant un quiz, appuie sur « Traduire en français » : la question s'ajoutera ici.</p>`;
+  } else renderFlash();
 }
+// Cartes de révision : le mot anglais d'abord, la traduction en un clic.
+let flash = null;
+function renderFlash() {
+  const ready = Object.entries(S.dict).filter(([, e]) => !e.pending);
+  const box = $("#lex-flash");
+  if (!ready.length) { box.innerHTML = `<p class="hint">Traduis d'abord quelques mots : ils deviendront des cartes de révision.</p>`; return; }
+  if (!flash || !flash.keys.length) {
+    // Les mots les moins sus passent en premier.
+    flash = { keys: shuffle(ready.map(([k]) => k)).sort((a, b) => (S.dict[a].known || 0) - (S.dict[b].known || 0)), shown: false, done: 0, total: ready.length };
+  }
+  const k = flash.keys[0];
+  const e = S.dict[k];
+  box.innerHTML = `<p class="hint">Carte ${flash.done + 1} sur ${flash.total}. Essaie de trouver la traduction avant de la voir.</p>
+    <div class="flash ${topicClass(k)}"><span class="w-en">${esc(e.en)}</span>${flash.shown ? `<span class="w-fr">${esc(e.fr)}</span><span>${esc(e.definition)}</span>${e.example ? `<small>${esc(e.example)}</small>` : ""}` : ""}</div>
+    <div class="row" style="justify-content:center">${flash.shown
+      ? `<button type="button" class="fun" data-flash="again">À revoir</button><button type="button" class="primary" data-flash="know">Je savais</button>`
+      : `<button type="button" class="violet" data-flash="show">Voir la traduction</button>`}</div>`;
+}
+$("#lex-flash").addEventListener("click", (e) => {
+  const a = e.target.closest("button")?.dataset.flash;
+  if (!a) return;
+  if (a === "show") flash.shown = true;
+  else {
+    const k = flash.keys.shift();
+    const entry = S.dict[k];
+    if (a === "know") { entry.known = (entry.known || 0) + 1; flash.done++; }
+    else { entry.known = 0; flash.keys.splice(Math.min(3, flash.keys.length), 0, k); }
+    saveDict();
+    flash.shown = false;
+    if (!flash.keys.length) { confetti(120); toast(`Bravo, tu as révisé tes ${flash.total} mots !`); flash = null; }
+  }
+  renderFlash();
+});
+document.querySelectorAll('input[name="lexmode"]').forEach((r) => r.addEventListener("change", () => { flash = null; renderLexicon(); }));
+$("#lex-list").addEventListener("click", async (e) => {
+  const k = e.target.dataset.retry;
+  if (k === undefined) return;
+  e.target.disabled = true;
+  await lookupWord(S.dict[k].en);
+  renderLexicon();
+});
 $("#lex-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const w = $("#lex-input").value;
@@ -1116,7 +1240,7 @@ function confetti(n = 80, rect = null) {
 // ======================================================================
 // Navigation
 // ======================================================================
-const RENDER = { lexicon: renderLexicon, home: renderHome, sources: renderSources, generate: renderGenerate, practice: renderPractice, exam: () => {}, bank: () => renderBank(true), history: renderHistory };
+const RENDER = { lexicon: renderLexicon, home: renderHome, sources: renderSources, generate: renderGenerate, practice: renderPractice, exam: () => { $("#ex-themes").innerHTML = themeChecks("extheme"); }, bank: () => renderBank(true), history: renderHistory };
 function setView(id) {
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + id));
   document.querySelectorAll("#nav button").forEach((b) => (b.dataset.view === id ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
@@ -1175,6 +1299,19 @@ function renderHome() {
   $("#step-3").classList.toggle("done", S.attempts.some((a) => a.mode !== "exam"));
   $("#step-4").classList.toggle("done", exams.length > 0);
   $("#resume-box").classList.toggle("hidden", !(S.cur && S.cur.session));
+  $("#home-themes").innerHTML = S.themes.length
+    ? S.themes.map((th) => {
+        const qs = S.questions.filter((q) => themeOfQ(q) === th.id);
+        let seen = 0, wrong = 0;
+        for (const q of qs) { const st = statOf(q.id); seen += st[0]; wrong += st[1]; }
+        const rate = seen ? Math.max(0, 1 - wrong / seen) : null;
+        const pct = rate === null ? 0 : Math.round(rate * 100);
+        return `<div class="theme-card ${themeClass(th.id)}"><h3>${esc(th.name)}</h3>
+          <small>${fr(qs.length)} questions${rate === null ? " · pas encore travaillé" : ` · ${pct} % de réussite`}</small>
+          <div class="bar-track"><div class="bar-fill ${rate === null ? "" : pct >= 70 ? "good" : pct >= 50 ? "mid" : "bad"}" style="width:${pct}%"></div></div>
+          <div class="row"><button type="button" class="small primary" data-home-theme="${th.id}" ${qs.length ? "" : "disabled"}>Réviser ce thème</button></div></div>`;
+      }).join("")
+    : `<p class="hint">Crée tes thèmes de cours dans l'onglet « Thèmes » pour suivre ta progression chapitre par chapitre.</p>`;
   const t = topicTable().filter((x) => x.seen > 0).sort((a, b) => a.rate - b.rate);
   $("#home-topics").innerHTML = t.length
     ? t.slice(0, 8).map((x) => bar(x.topic, x.rate, `${x.count} questions`)).join("")
@@ -1183,6 +1320,7 @@ function renderHome() {
 $("#exam-date").addEventListener("change", (e) => { S.prog.examDate = e.target.value; saveProgress(); renderHome(); });
 $("#daily-goal").addEventListener("change", (e) => { S.prog.goal = Math.max(5, Math.min(500, Number(e.target.value) || 40)); saveProgress(); renderHome(); });
 $("#quick-btn").addEventListener("click", () => startQuiz("practice", 20, []));
+$("#home-themes").addEventListener("click", (e) => { const id = e.target.dataset.homeTheme; if (id) startQuiz("practice", 20, [], 180, [id]); });
 function topicTable() {
   const m = {};
   for (const q of S.questions) {
@@ -1239,7 +1377,7 @@ $("#upload-form").addEventListener("submit", async (e) => {
       const chunks = chunkText(text);
       status.textContent = `Enregistrement de « ${it.name} »…`;
       for (let n = 0; n < chunks.length; n++) await write(col("chunks").doc(`${sourceId}-${n}`), "set", { sourceId, n, text: chunks[n] });
-      const src = { name: it.name, kind, chars: text.length, chunkCount: chunks.length, createdAt: Date.now() };
+      const src = { name: it.name, kind, chars: text.length, chunkCount: chunks.length, createdAt: Date.now(), themeId: $("#up-theme").value || "" };
       await write(col("sources").doc(sourceId), "set", src);
       S.sources.push({ id: sourceId, ...src });
       const parsed = parseQuizText(text, it.name.replace(/\.[^.]+$/, ""));
@@ -1277,16 +1415,81 @@ async function extractQuiz(sourceId, name, chunks, onStatus) {
   return total;
 }
 
+function themeOptions(selected = "") {
+  return `<option value="">Sans thème</option>` + S.themes.map((t) => `<option value="${t.id}" ${t.id === selected ? "selected" : ""}>${esc(t.name)}</option>`).join("");
+}
 function renderSources() {
+  const keep = $("#up-theme").value;
+  $("#up-theme").innerHTML = themeOptions(keep);
+  $("#themes-list").innerHTML = S.themes.length
+    ? S.themes.map((t) => {
+        const docs = S.sources.filter((x) => x.themeId === t.id).length;
+        const qs = S.questions.filter((q) => themeOfQ(q) === t.id).length;
+        return `<div class="theme-card ${themeClass(t.id)}"><h3>${esc(t.name)}</h3><small>${docs} document${docs > 1 ? "s" : ""} · ${fr(qs)} question${qs > 1 ? "s" : ""}</small>
+          <div class="row"><button type="button" class="small" data-theme-train="${t.id}">Réviser</button><button type="button" class="small" data-theme-ren="${t.id}">Renommer</button><button type="button" class="small" data-theme-del="${t.id}">Supprimer</button></div></div>`;
+      }).join("")
+    : `<p class="hint">Pas encore de thème. Écris le nom du premier chapitre ci-dessus.</p>`;
   const list = $("#sources-list");
   if (!S.sources.length) { list.innerHTML = `<div class="hint">Aucun document pour l'instant. Commence par le PDF de ton cours.</div>`; return; }
-  list.innerHTML = S.sources.map((s) => {
+  const order = [...S.themes.map((t) => t.id), ""];
+  const sorted = [...S.sources].sort((a, b) => order.indexOf(a.themeId || "") - order.indexOf(b.themeId || ""));
+  list.innerHTML = sorted.map((s) => {
     const n = S.questions.filter((q) => q.sourceId === s.id).length;
     return `<div><span class="grow"><strong>${esc(s.name)}</strong><small>${s.kind === "quiz" ? "Quiz" : "Cours"} · ${fr(Math.round(s.chars / 1000))} k caractères · ${fr(n)} questions</small></span>
+      <select class="small" data-settheme="${s.id}" aria-label="Thème de ${esc(s.name)}" style="width:auto;max-width:220px">${themeOptions(s.themeId || "")}</select>
       ${s.kind === "quiz" ? `<button type="button" class="small" data-reextract="${s.id}">Relire avec Claude</button>` : ""}
       <button type="button" class="small" data-delsrc="${s.id}">Supprimer</button></div>`;
   }).join("");
 }
+$("#theme-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = $("#theme-name").value.trim();
+  if (!name) return;
+  if (S.themes.some((t) => t.name.toLowerCase() === name.toLowerCase())) return toast("Ce thème existe déjà.", true);
+  const t = { id: "t" + rid(), name };
+  S.themes.push(t);
+  saveThemes();
+  $("#theme-name").value = "";
+  $("#up-theme").innerHTML = themeOptions(t.id);
+  renderSources();
+  $("#up-theme").value = t.id;
+  toast(`Thème « ${name} » créé. Ajoute-lui des documents.`);
+});
+$("#themes-list").addEventListener("click", async (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.themeTrain) return startQuiz("practice", 20, [], 180, [b.dataset.themeTrain]);
+  if (b.dataset.themeRen) {
+    const t = themeById(b.dataset.themeRen);
+    const card = b.closest(".theme-card");
+    card.querySelector("h3").outerHTML = `<form class="row" data-renform="${t.id}"><input type="text" value="${esc(t.name)}" maxlength="60" aria-label="Nouveau nom" style="flex:1"><button type="submit" class="small primary">OK</button></form>`;
+    card.querySelector("input").focus();
+    return;
+  }
+  if (b.dataset.themeDel) {
+    const t = themeById(b.dataset.themeDel);
+    if (!(await ask(`Supprimer le thème « ${t.name} » ? Ses documents et ses questions sont gardés, simplement sans thème.`, [["Annuler", false], ["Supprimer le thème", true]]))) return;
+    S.themes = S.themes.filter((x) => x.id !== t.id);
+    for (const src of S.sources.filter((x) => x.themeId === t.id)) { src.themeId = ""; write(col("sources").doc(src.id), "update", { themeId: "" }).catch(() => {}); }
+    saveThemes();
+    renderSources();
+  }
+});
+$("#themes-list").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const t = themeById(e.target.dataset.renform);
+  const v = e.target.querySelector("input").value.trim();
+  if (t && v) { t.name = v; saveThemes(); }
+  renderSources();
+});
+$("#sources-list").addEventListener("change", (e) => {
+  const id = e.target.dataset.settheme;
+  if (!id) return;
+  const src = S.sources.find((x) => x.id === id);
+  src.themeId = e.target.value;
+  write(col("sources").doc(id), "update", { themeId: src.themeId }).catch(() => {});
+  renderSources();
+});
 $("#sources-list").addEventListener("click", async (e) => {
   const del = e.target.dataset.delsrc, re = e.target.dataset.reextract;
   if (re) {
@@ -1319,12 +1522,20 @@ $("#sources-list").addEventListener("click", async (e) => {
 let genCtl = null;
 function renderGenerate() {
   const courses = S.sources;
+  const groups = [...S.themes.map((t) => ({ id: t.id, name: t.name })), { id: "", name: "Sans thème" }]
+    .map((g) => ({ ...g, docs: courses.filter((x) => (x.themeId || "") === g.id) }))
+    .filter((g) => g.docs.length);
   $("#gen-sources").innerHTML = courses.length
-    ? courses.map((s) => `<label><input type="checkbox" name="gsrc" value="${s.id}" ${s.kind !== "quiz" ? "checked" : ""}> ${esc(s.name)}</label>`).join("")
-    : `<span class="hint">Dépose d'abord tes documents dans « Mes documents ».</span>`;
+    ? `<div class="stack" style="width:100%">${groups.map((g) => `<div class="group"><label class="${g.id ? themeClass(g.id) : ""}"><input type="checkbox" data-gtheme="${g.id}"> ${esc(g.name)}</label><div class="checks">${g.docs.map((x) => `<label><input type="checkbox" name="gsrc" value="${x.id}" data-ingroup="${g.id}"> ${esc(x.name)}</label>`).join("")}</div></div>`).join("")}</div>`
+    : `<span class="hint">Dépose d'abord tes documents dans l'onglet « Thèmes ».</span>`;
   $("#gen-btn").disabled = !courses.length || !SAMPLE || !!genCtl;
   if (!SAMPLE) $("#gen-btn").title = "Claude n'est pas disponible dans cette vue";
 }
+$("#gen-sources").addEventListener("change", (e) => {
+  const g = e.target.dataset.gtheme;
+  if (g === undefined) return;
+  document.querySelectorAll(`input[data-ingroup="${g}"]`).forEach((c) => (c.checked = e.target.checked));
+});
 
 $("#gen-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -1395,6 +1606,7 @@ $("#gen-stop").addEventListener("click", () => genCtl?.abort());
 // Séries : entraînement, révision, examen
 // ======================================================================
 function renderPractice() {
+  $("#pr-themes").innerHTML = themeChecks("ptheme");
   const t = topicTable();
   $("#pr-topics").innerHTML = t.length
     ? t.map((x) => `<label><input type="checkbox" name="ptopic" value="${esc(x.topic)}"> ${esc(x.topic)} <small>(${x.count})</small></label>`).join("")
@@ -1411,8 +1623,9 @@ function pickStratified(pool, count) {
   while (picked.length < count && rest.length) picked.push(rest.pop());
   return shuffle(picked.slice(0, count));
 }
-function buildSession(mode, count, topics = [], durationMin = 180) {
+function buildSession(mode, count, topics = [], durationMin = 180, themes = []) {
   let pool = S.questions;
+  if (themes.length) pool = pool.filter((q) => themes.includes(themeOfQ(q)));
   if (topics.length) pool = pool.filter((q) => topics.includes(q.topic));
   if (mode === "review") {
     pool = pool.filter((q) => statOf(q.id)[1] > 0);
@@ -1430,9 +1643,9 @@ function buildSession(mode, count, topics = [], durationMin = 180) {
 }
 
 let quiz = null, timerH = null;
-function startQuiz(mode, count, topics, durationMin) {
+function startQuiz(mode, count, topics, durationMin, themes = []) {
   try {
-    const session = buildSession(mode, count, topics, durationMin);
+    const session = buildSession(mode, count, topics, durationMin, themes);
     if (session.items.length < count) toast(`Ta banque ne contient que ${session.items.length} questions pour cette sélection.`);
     quiz = { session, idx: 0, answers: {}, flags: {}, feedback: {}, finished: false };
     S.cur = quiz;
@@ -1442,9 +1655,9 @@ function startQuiz(mode, count, topics, durationMin) {
 }
 $("#practice-form").addEventListener("submit", (e) => {
   e.preventDefault();
-  startQuiz(document.querySelector('input[name="pmode"]:checked').value, Number($("#pr-count").value) || 20, [...document.querySelectorAll('input[name="ptopic"]:checked')].map((c) => c.value));
+  startQuiz(document.querySelector('input[name="pmode"]:checked').value, Number($("#pr-count").value) || 20, [...document.querySelectorAll('input[name="ptopic"]:checked')].map((c) => c.value), 180, [...document.querySelectorAll('input[name="ptheme"]:checked')].map((c) => c.value));
 });
-$("#exam-form").addEventListener("submit", (e) => { e.preventDefault(); startQuiz("exam", Number($("#ex-count").value) || 80, [], Number($("#ex-min").value) || 180); });
+$("#exam-form").addEventListener("submit", (e) => { e.preventDefault(); startQuiz("exam", Number($("#ex-count").value) || 80, [], Number($("#ex-min").value) || 180, [...document.querySelectorAll('input[name="extheme"]:checked')].map((c) => c.value)); });
 $("#exam-form").addEventListener("input", () => {
   const per = ((Number($("#ex-min").value) || 0) * 60) / Math.max(1, Number($("#ex-count").value) || 1);
   $("#ex-pace").textContent = `Soit ${Math.floor(per / 60)} min ${Math.round(per % 60)} s par question.`;
@@ -1484,7 +1697,7 @@ function renderQuestion() {
   } else {
     const v = shown(q);
     $("#qcard").className = "qcard " + topicClass(q.topic);
-    $("#q-meta").innerHTML = `${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}${v.fr ? '<span class="pill c-violet">traduit en français</span>' : ""}`;
+    $("#q-meta").innerHTML = `${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}${v.fr ? '<span class="pill c-violet">traduit en français</span>' : ""}`;
     $("#q-text").textContent = v.question;
     const tb = $("#q-translate");
     tb.disabled = !SAMPLE && !q.fr;
@@ -1625,8 +1838,9 @@ function renderResult(a) {
 let bankShown = 0;
 function bankFiltered() {
   const term = stemKey($("#bank-search").value);
-  const topic = $("#bank-topic").value, f = $("#bank-filter").value;
+  const topic = $("#bank-topic").value, f = $("#bank-filter").value, th = $("#bank-theme").value;
   return S.questions.filter((q) =>
+    (!th || themeOfQ(q) === th) &&
     (!topic || q.topic === topic) &&
     (!term || stemKey(q.question).includes(term)) &&
     (f !== "wrong" || statOf(q.id)[1] > 0) &&
@@ -1636,7 +1850,9 @@ function renderBank(reset) {
   if (reset) {
     bankShown = 0;
     const cur = $("#bank-topic").value;
-    $("#bank-topic").innerHTML = `<option value="">Tous les thèmes</option>` + topicTable().map((t) => `<option ${t.topic === cur ? "selected" : ""}>${esc(t.topic)}</option>`).join("");
+    const curTh = $("#bank-theme").value;
+    $("#bank-theme").innerHTML = `<option value="">Tous les thèmes de cours</option>` + S.themes.map((t) => `<option value="${t.id}" ${t.id === curTh ? "selected" : ""}>${esc(t.name)}</option>`).join("");
+    $("#bank-topic").innerHTML = `<option value="">Toutes les notions</option>` + topicTable().map((t) => `<option ${t.topic === cur ? "selected" : ""}>${esc(t.topic)}</option>`).join("");
     $("#bank-list").innerHTML = "";
   }
   const list = bankFiltered();
@@ -1645,7 +1861,7 @@ function renderBank(reset) {
   $("#bank-list").insertAdjacentHTML("beforeend", page.map((q) => {
     const s = statOf(q.id);
     return `<div class="panel" data-q="${q.id}">
-      <div class="qhead">${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}
+      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
       <p><strong>${esc(q.question)}</strong></p>
       <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
@@ -1658,6 +1874,7 @@ function renderBank(reset) {
 let bankT;
 $("#bank-search").addEventListener("input", () => { clearTimeout(bankT); bankT = setTimeout(() => renderBank(true), 250); });
 $("#bank-topic").addEventListener("change", () => renderBank(true));
+$("#bank-theme").addEventListener("change", () => renderBank(true));
 $("#bank-filter").addEventListener("change", () => renderBank(true));
 $("#bank-more").addEventListener("click", () => renderBank(false));
 $("#bank-list").addEventListener("click", async (e) => {
