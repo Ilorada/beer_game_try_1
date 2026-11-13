@@ -425,7 +425,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     <div class="page-title"><span class="ico c-orange" style="background:var(--cs);color:var(--c)"><svg><use href="#i-spark"/></svg></span><h1 id="gen-title">Créer des questions</h1></div>
     <form id="gen-form" class="panel">
       <fieldset>
-        <legend>Documents à utiliser</legend>
+        <legend>Cours et livres à utiliser</legend>
         <div id="gen-sources" class="checks"></div>
       </fieldset>
       <div class="row">
@@ -449,7 +449,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <button type="submit" class="fun" id="gen-btn"><svg><use href="#i-spark"/></svg>Créer les questions</button>
         <button type="button" id="gen-stop" class="hidden">Arrêter</button>
       </div>
-      <p class="hint">Les questions de tes quiz d'école servent de modèle : Claude écrit des questions du même style. Il ne pose jamais de question sur l'organisation du cours.</p>
+      <p class="notice" id="gen-models"></p>
       <p class="hint">Claude rédige les questions par lots de 20. Elles s'ajoutent à ta banque au fur et à mesure : tu peux t'entraîner pendant ce temps, mais garde cette page ouverte jusqu'à la fin. Compte environ une minute par lot. La création utilise ton forfait Claude.</p>
     </form>
     <div id="gen-progress" class="panel hidden">
@@ -537,7 +537,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <select id="bank-theme" style="flex:1 1 160px;width:auto" aria-label="Thème de cours"></select>
       <select id="bank-topic" style="flex:1 1 160px;width:auto" aria-label="Notion"></select>
       <select id="bank-filter" style="flex:1 1 140px;width:auto" aria-label="Filtre">
-        <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option>
+        <option value="">Toutes</option><option value="wrong">Mes erreurs</option><option value="guessed">Réponse à vérifier</option><option value="altered">Texte différent du quiz ?</option><option value="quiz">Questions de mes quiz</option>
       </select>
     </div>
     <div class="row between"><p class="hint" id="bank-count"></p>
@@ -699,7 +699,7 @@ async function addQuestions(list, sourceId, origin) {
       id: rid(), question: String(q.question).trim(), choices, answer,
       explanation: String(q.explanation || "").trim(), topic: String(q.topic || "Général").trim().slice(0, 60) || "Général",
       difficulty: ["facile", "moyen", "difficile"].includes(q.difficulty) ? q.difficulty : "moyen",
-      origin, guessed: !!q.answerGuessed,
+      origin, guessed: !!q.answerGuessed, altered: !!q.altered,
     });
   }
   for (let i = 0; i < clean.length; i += 150) {
@@ -998,16 +998,17 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
 
 function extractionPrompt(chunk, sourceName) {
   return [
-    "Voici un extrait d'un quiz d'entraînement de supply chain donné par une école. Recopie TOUTES les questions qu'il contient, dans leur langue d'origine (ne traduis pas), sans en inventer.",
-    "- Garde l'énoncé et les propositions tels quels (corrige seulement les coupures de ligne).",
+    "Voici un extrait d'un quiz d'entraînement de supply chain donné par une école. Recopie TOUTES les questions à choix multiples qu'il contient, sans en inventer aucune.",
+    "- Copie MOT POUR MOT l'énoncé et chaque proposition, exactement comme dans le document : mêmes mots, même langue (ne traduis pas), même ponctuation, même ordre des propositions. Ne reformule rien, ne corrige rien, ne raccourcis rien.",
+    "- Seule exception : recolle les mots coupés par un retour à la ligne ou un tiret de fin de ligne dus à la mise en page.",
+    "- N'inclus pas la lettre ou le numéro devant chaque proposition (« A) », « 1. »…).",
     "- Si la bonne réponse est indiquée dans le document, utilise-la et mets \"answerGuessed\": false.",
     "- Sinon, trouve la bonne réponse avec tes connaissances de supply chain, mets \"answerGuessed\": true et explique ton raisonnement.",
-    "- Une question ouverte (sans propositions) devient un QCM de 4 propositions dont une seule juste, avec \"answerGuessed\": true.",
-    "- Écris une courte explication pour chaque question, en français.",
-    "- Ignore les éventuelles questions qui ne portent pas sur des connaissances de supply chain (organisation du cours, présentation, consignes).",
+    "- Une question sans propositions (question ouverte) n'est pas un QCM : ne l'inclus pas et compte-la dans « openSkipped ».",
+    "- Écris une courte explication pour chaque question, en français (c'est le seul texte que tu rédiges toi-même).",
     topicsHint(),
-    `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false}]}`,
-    'Si l\'extrait ne contient aucune question, réponds {"questions":[]}.',
+    `Réponds uniquement avec un objet JSON de cette forme : {"questions":[{"question":"…","choices":["…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"moyen","answerGuessed":false}],"openSkipped":0}`,
+    'Si l\'extrait ne contient aucune question, réponds {"questions":[],"openSkipped":0}.',
     `\n=== QUIZ : « ${sourceName} » ===\n${chunk}\n=== FIN ===`,
   ].join("\n");
 }
@@ -1420,11 +1421,11 @@ $("#upload-form").addEventListener("submit", async (e) => {
       let msg = `✔ ${it.name} : ${fr(Math.round(text.length / 1000))} k caractères`;
       if (added) msg += `, ${added} questions de quiz ajoutées`;
       logTo(log, msg, "good");
-      if (kind === "quiz" && !parsed.length) {
-        logTo(log, `Claude lit les questions de « ${it.name} »…`);
-        added = await extractQuiz(sourceId, it.name, chunks, (m) => (status.textContent = m));
-        logTo(log, `✔ ${added} questions récupérées dans « ${it.name} »`, "good");
-      }
+      if (kind === "quiz" && SAMPLE) {
+        logTo(log, `Claude vérifie qu'aucune question de « ${it.name} » n'a été oubliée…`);
+        const more = await extractQuiz(sourceId, it.name, chunks, (m) => (status.textContent = m));
+        logTo(log, `✔ « ${it.name} » : ${added + more} questions recopiées telles quelles${lastOpenSkipped ? ` (${lastOpenSkipped} question${lastOpenSkipped > 1 ? "s" : ""} ouverte${lastOpenSkipped > 1 ? "s" : ""} sans propositions laissée${lastOpenSkipped > 1 ? "s" : ""} de côté)` : ""}`, "good");
+      } else if (kind === "quiz" && !parsed.length) throw new Error("Claude n'est pas disponible dans cette vue : le quiz n'a pas pu être lu.");
     } catch (err) {
       logTo(log, `✘ ${it.name} : ${err.message || SAMPLE_ERRORS[err.code] || err.code}`, "bad");
     }
@@ -1435,14 +1436,24 @@ $("#upload-form").addEventListener("submit", async (e) => {
   renderSources();
 });
 
+// Une question est « fidèle » si son énoncé et ses propositions se retrouvent dans le texte du quiz.
+const loose = (t) => stemKey(t).replace(/ /g, "");
+function isVerbatim(q, chunk) {
+  const hay = loose(chunk);
+  return [q.question, ...(q.choices || [])].every((t) => hay.includes(loose(t)));
+}
+let lastOpenSkipped = 0;
 async function extractQuiz(sourceId, name, chunks, onStatus) {
   if (!SAMPLE) throw new Error("Claude n'est pas disponible dans cette vue : le quiz n'a pas pu être lu.");
   let total = 0;
+  lastOpenSkipped = 0;
   for (let i = 0; i < chunks.length; i++) {
     onStatus?.(`Claude lit le quiz « ${name} » : partie ${i + 1} / ${chunks.length}`);
     try {
       const data = await SAMPLE.json(extractionPrompt(chunks[i], name), { cache: false });
-      total += await addQuestions(Array.isArray(data?.questions) ? data.questions : [], sourceId, "quiz");
+      const list = (Array.isArray(data?.questions) ? data.questions : []).map((q) => ({ ...q, altered: !isVerbatim(q, chunks[i]) }));
+      lastOpenSkipped += Number(data?.openSkipped) || 0;
+      total += await addQuestions(list, sourceId, "quiz");
     } catch (e) {
       if (FATAL.has(e.code)) throw { code: e.code, message: SAMPLE_ERRORS[e.code] || e.message };
     }
@@ -1536,7 +1547,7 @@ $("#sources-list").addEventListener("change", async (e) => {
         try {
           const chunks = (await chunksOf(kid)).map((c) => c.text);
           let added = await addQuestions(parseQuizText(chunks.join("\n\n"), src.name.replace(/\.[^.]+$/, "")), kid, "quiz");
-          if (!added) added = await extractQuiz(kid, src.name, chunks, (m) => (status.textContent = m));
+          if (SAMPLE) added += await extractQuiz(kid, src.name, chunks, (m) => (status.textContent = m));
           toast(`${added} questions récupérées dans « ${src.name} ».`);
         } catch (err) { toast(err.message || err.code, true); }
         status.textContent = "";
@@ -1592,13 +1603,17 @@ $("#sources-list").addEventListener("click", async (e) => {
 // ======================================================================
 let genCtl = null;
 function renderGenerate() {
-  const courses = S.sources;
+  const courses = S.sources.filter((x) => x.kind !== "quiz");
   const groups = [...S.themes.map((t) => ({ id: t.id, name: t.name })), { id: "", name: "Sans thème" }]
     .map((g) => ({ ...g, docs: courses.filter((x) => (x.themeId || "") === g.id) }))
     .filter((g) => g.docs.length);
   $("#gen-sources").innerHTML = courses.length
     ? `<div class="stack" style="width:100%">${groups.map((g) => `<div class="group"><label class="${g.id ? themeClass(g.id) : ""}"><input type="checkbox" data-gtheme="${g.id}"> ${esc(g.name)}</label><div class="checks">${g.docs.map((x) => `<label><input type="checkbox" name="gsrc" value="${x.id}" data-ingroup="${g.id}"> ${esc(x.name)}</label>`).join("")}</div></div>`).join("")}</div>`
-    : `<span class="hint">Dépose d'abord tes documents dans l'onglet « Thèmes ».</span>`;
+    : `<span class="hint">Dépose d'abord tes cours ou ton livre dans l'onglet « Thèmes ».</span>`;
+  const nq = S.questions.filter((q) => q.origin === "quiz").length;
+  $("#gen-models").textContent = nq
+    ? `Modèles : les ${fr(nq)} questions de tes quiz d'école. Claude écrit de nouvelles questions dans le même style, sur la supply chain uniquement.`
+    : "Ajoute tes quiz d'école (type « Quiz ») : Claude s'en servira comme modèles pour écrire des questions qui leur ressemblent.";
   $("#gen-btn").disabled = !courses.length || !SAMPLE || !!genCtl;
   if (!SAMPLE) $("#gen-btn").title = "Claude n'est pas disponible dans cette vue";
 }
@@ -1710,7 +1725,8 @@ function buildSession(mode, count, topics = [], durationMin = 180, themes = []) 
   return {
     id: "a" + rid(), mode, startedAt: Date.now(),
     durationSec: mode === "exam" ? Math.round(durationMin * 60) : null,
-    items: chosen.map((q) => ({ q: q.id, o: shuffle(q.choices.map((_, i) => i)) })),
+    // Questions des quiz de l'école : propositions dans leur ordre d'origine ; les autres sont mélangées.
+    items: chosen.map((q) => ({ q: q.id, o: q.origin === "quiz" ? q.choices.map((_, i) => i) : shuffle(q.choices.map((_, i) => i)) })),
   };
 }
 
@@ -1916,7 +1932,9 @@ function bankFiltered() {
     (!topic || q.topic === topic) &&
     (!term || stemKey(q.question).includes(term)) &&
     (f !== "wrong" || statOf(q.id)[1] > 0) &&
-    (f !== "guessed" || q.guessed));
+    (f !== "guessed" || q.guessed) &&
+    (f !== "altered" || q.altered) &&
+    (f !== "quiz" || q.origin === "quiz"));
 }
 function renderBank(reset) {
   if (reset) {
@@ -1933,7 +1951,7 @@ function renderBank(reset) {
   $("#bank-list").insertAdjacentHTML("beforeend", page.map((q) => {
     const s = statOf(q.id);
     return `<div class="panel" data-q="${q.id}">
-      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}
+      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.guessed ? '<span class="pill bad">réponse à vérifier</span>' : ""}${q.altered ? '<span class="pill bad">texte différent du quiz ?</span>' : ""}
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
       <p><strong>${esc(q.question)}</strong></p>
       <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
