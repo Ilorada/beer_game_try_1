@@ -291,6 +291,17 @@ button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; backgroun
 .tq > div { display: flex; flex-direction: column; gap: 4px; }
 .tq .lang { font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 @media (max-width: 720px) { .tq { grid-template-columns: 1fr; } }
+.picked { display: flex; flex-wrap: wrap; gap: 10px; }
+.picked:empty { display: none; }
+.picked figure { margin: 0; position: relative; width: 108px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.picked img { width: 108px; height: 108px; object-fit: cover; border-radius: 12px; border: 2px solid var(--line); background: var(--bg); }
+.picked .doc-chip { width: 108px; height: 108px; border-radius: 12px; background: var(--teal-soft); color: var(--teal-deep); display: grid; place-items: center; font-weight: 800; }
+.picked figcaption { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picked button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; padding: 0; border-radius: 50%; font-size: 13px; }
+.lang-switch { display: inline-flex; gap: 0; background: var(--violet-soft); border-radius: 99px; padding: 3px; }
+.lang-switch button { border: 0; background: none; border-radius: 99px; padding: 5px 13px; font-size: 14px; color: var(--violet); }
+.lang-switch button[aria-pressed="true"] { background: var(--violet); color: #fff; }
+.lang-switch .busy { font-size: 13px; color: var(--violet); padding: 0 8px; align-self: center; }
 .ref { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; color: var(--muted); background: var(--teal-soft); border-radius: 12px; padding: 8px 12px; }
 .ref svg { flex: none; margin-top: 3px; color: var(--teal-deep); }
 .ref strong { color: var(--ink); }
@@ -452,10 +463,12 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <label class="drop" id="drop" for="file-input">
         <svg><use href="#i-upload"/></svg>
         <strong>Clique ici ou dépose tes fichiers</strong>
-        <span>PDF, Word (.docx), texte, ou photos de pages (JPEG, PNG)</span>
+        <span>PDF, Word (.docx), texte, ou photos de pages</span>
+        <span><strong style="font-size:16px">Astuce : copie une image puis colle-la ici avec Ctrl+V</strong> (Cmd+V sur Mac)</span>
         <span id="drop-files"></span>
       </label>
-      <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,image/jpeg,image/png,image/webp" class="hidden">
+      <div id="picked" class="picked"></div>
+      <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,image/*,.heic,.heif" class="hidden">
       <details>
         <summary>Ou colle du texte</summary>
         <div class="stack" style="margin-top:10px">
@@ -566,7 +579,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <div id="q-feedback" class="feedback hidden"></div>
       <div id="q-ask" class="hidden"></div>
       <div class="qtools">
-        <button type="button" class="chip" id="q-translate"><svg><use href="#i-lang"/></svg>Traduire en français</button>
+        <span class="lang-switch" data-langswitch></span>
         <form class="dico-box" id="dico-form"><input type="search" id="dico-input" placeholder="Un mot à traduire ? ex. lead time" aria-label="Mot à traduire"><button type="submit" class="small">Traduire</button></form>
       </div>
     </article>
@@ -593,7 +606,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       </select>
     </div>
     <div class="row between"><p class="hint" id="bank-count"></p>
-      <div class="row"><button type="button" class="small" id="bank-verify"><svg><use href="#i-check"/></svg>Vérifier les réponses non vérifiées</button><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
+      <div class="row"><span class="lang-switch" data-langswitch></span><button type="button" class="small" id="bank-verify"><svg><use href="#i-check"/></svg>Vérifier les réponses non vérifiées</button><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
     <div id="clean-panel" class="panel hidden"></div>
     <div id="bank-list" class="stack"></div>
     <div><button type="button" id="bank-more" class="hidden">Afficher plus</button></div>
@@ -1146,7 +1159,7 @@ function translateQuestion(q) {
       return q.fr;
     })
     .catch((e) => {
-      if (e?.code !== "cancelled") toast(e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Traduction impossible pour le moment. Réessaie.", true);
+      if (e?.code !== "cancelled") toast(e?.code === "rate_limited" ? SAMPLE_ERRORS.rate_limited : "Traduction impossible pour le moment : la question reste en anglais. Réessaie plus tard.", true);
       throw e;
     })
     .finally(() => translating.delete(q.id));
@@ -1154,20 +1167,43 @@ function translateQuestion(q) {
   return job;
 }
 
-$("#q-translate").addEventListener("click", async () => {
-  const q = itemQ(quiz.session.items[quiz.idx]);
-  if (!q) return;
-  if (S.prog.showFr && q.fr) { S.prog.showFr = false; saveProgress(); renderQuestion(); return; }
-  S.prog.showFr = true;
+// Un seul réglage de langue pour tout l'écran. « Anglais » revient toujours tout de suite à l'original,
+// même si une traduction est en cours ou a échoué.
+function langSwitchHTML() {
+  const fr = !!S.prog.showFr;
+  return `<button type="button" data-lang="en" aria-pressed="${!fr}">Anglais (original)</button><button type="button" data-lang="fr" aria-pressed="${fr}">Français</button>`;
+}
+function paintLangSwitches() { document.querySelectorAll("[data-langswitch]").forEach((el) => (el.innerHTML = langSwitchHTML())); }
+let lastResult = null;
+function rerenderCurrent() {
+  if ($("#view-quiz").classList.contains("active") && quiz) renderQuestion();
+  else if ($("#view-result").classList.contains("active") && lastResult) renderResult(lastResult, true);
+  else if ($("#view-bank").classList.contains("active")) renderBank(true);
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-lang]");
+  if (!b) return;
+  const fr = b.dataset.lang === "fr";
+  if (!!S.prog.showFr === fr) return;
+  if (fr && !SAMPLE) return toast("Claude n'est pas disponible dans cette vue pour traduire.", true);
+  S.prog.showFr = fr;
   saveProgress();
-  if (!q.fr) {
-    const btn = $("#q-translate");
-    btn.disabled = true;
-    btn.lastChild.textContent = "Traduction…";
-    try { await translateQuestion(q); } catch { S.prog.showFr = false; }
-  }
-  renderQuestion();
+  paintLangSwitches();
+  rerenderCurrent();
 });
+// Traduit une question puis rafraîchit l'écran si l'utilisateur est toujours en français.
+function translateThenRefresh(q) {
+  if (q.fr || !SAMPLE || translating.has(q.id)) return;
+  translateQuestion(q).then(() => { if (S.prog.showFr) rerenderCurrent(); }).catch(() => {});
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-trq]");
+  if (!b) return;
+  const q = S.qById.get(b.dataset.trq);
+  b.disabled = true; b.textContent = "Traduction…";
+  translateThenRefresh(q);
+});
+const trLink = (q) => (S.prog.showFr && !q.fr ? ` <button type="button" class="link" data-trq="${q.id}">${translating.has(q.id) ? "Traduction…" : "Traduire cette question"}</button>` : "");
 
 const wordKey = (w) => w.trim().toLowerCase().replace(/\s+/g, " ").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
 let dictTimer = null;
@@ -1698,9 +1734,55 @@ const drop = $("#drop");
 let pickedFiles = [];
 ["dragover", "dragenter"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove("over")));
-drop.addEventListener("drop", (e) => { e.preventDefault(); pickedFiles = [...e.dataTransfer.files]; showPicked(); });
-$("#file-input").addEventListener("change", (e) => { pickedFiles = [...e.target.files]; showPicked(); });
-function showPicked() { $("#drop-files").textContent = pickedFiles.length ? `Sélection : ${pickedFiles.map((f) => f.name).join(", ")}` : ""; }
+drop.addEventListener("drop", (e) => { e.preventDefault(); addPicked([...e.dataTransfer.files]); });
+$("#file-input").addEventListener("change", (e) => { addPicked([...e.target.files]); e.target.value = ""; });
+// Les fichiers s'ajoutent à la sélection (on peut en coller ou en choisir plusieurs fois).
+let pasteCount = 0;
+function addPicked(files) {
+  for (const f of files) if (!pickedFiles.some((x) => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)) pickedFiles.push(f);
+  showPicked();
+}
+const previewUrls = new Map();
+function showPicked() {
+  $("#drop-files").textContent = pickedFiles.length ? `${pickedFiles.length} fichier${pickedFiles.length > 1 ? "s" : ""} prêt${pickedFiles.length > 1 ? "s" : ""} : clique sur « Ajouter »` : "";
+  for (const [f, u] of previewUrls) if (!pickedFiles.includes(f)) { URL.revokeObjectURL(u); previewUrls.delete(f); }
+  $("#picked").innerHTML = pickedFiles.map((f, i) => {
+    const img = isImageFile(f);
+    if (img && !previewUrls.has(f)) previewUrls.set(f, URL.createObjectURL(f));
+    return `<figure>${img ? `<img src="${previewUrls.get(f)}" alt="">` : `<span class="doc-chip">${esc((f.name.match(/\.([^.]+)$/) || ["", "doc"])[1].toUpperCase())}</span>`}<figcaption>${img ? `Page ${pickedFiles.filter(isImageFile).indexOf(f) + 1}` : esc(f.name)}</figcaption><button type="button" data-unpick="${i}" aria-label="Retirer">✕</button></figure>`;
+  }).join("");
+}
+$("#picked").addEventListener("click", (e) => { const i = e.target.dataset.unpick; if (i !== undefined) { pickedFiles.splice(Number(i), 1); showPicked(); } });
+const isImageFile = (f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name);
+// Coller une image (Ctrl+V / Cmd+V) n'importe où dans la page : elle arrive dans « Ajouter des documents ».
+document.addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData?.items || [])].filter((it) => it.kind === "file").map((it) => it.getAsFile()).filter(Boolean);
+  const imgs = files.filter((f) => /^image\//.test(f.type));
+  if (!imgs.length) return;
+  if (e.target.closest?.("input, textarea") && !imgs.length) return;
+  e.preventDefault();
+  const named = imgs.map((f) => new File([f], `image-collee-${++pasteCount}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type, lastModified: Date.now() + pasteCount }));
+  if (!$("#view-sources").classList.contains("active")) { setView("sources"); renderSources(); }
+  addPicked(named);
+  toast(`${named.length} image${named.length > 1 ? "s" : ""} collée${named.length > 1 ? "s" : ""}. Choisis « Cours » ou « Quiz », puis clique sur « Ajouter ».`);
+  $("#drop").scrollIntoView({ behavior: "smooth", block: "center" });
+});
+// Convertit toute photo (y compris HEIC d'iPhone quand le navigateur sait la lire) en JPEG de 2 000 px max.
+async function normalizeImage(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.9));
+    if (blob) return blob;
+  } catch {}
+  if (/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return file;
+  throw new Error(`l'image « ${file.name} » ne peut pas être lue par ce navigateur (format HEIC ?). Fais une capture d'écran de la photo et colle-la, ou enregistre-la en JPEG.`);
+}
 
 function logTo(el, msg, cls = "") { const d = document.createElement("div"); d.textContent = msg; if (cls) d.style.color = `var(--${cls})`; el.prepend(d); }
 
@@ -1709,7 +1791,7 @@ $("#upload-form").addEventListener("submit", async (e) => {
   if (!ROOT) return toast("Tes données ne sont pas accessibles : ouvre la page depuis Claude, connecté à ton compte.", true);
   const kind = document.querySelector('input[name="kind"]:checked').value;
   // Les photos choisies ensemble forment un seul document : une photo = une page.
-  const isImg = (f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
+  const isImg = isImageFile;
   const photos = pickedFiles.filter(isImg);
   const items = pickedFiles.filter((f) => !isImg(f)).map((f) => ({ name: f.name, file: f }));
   if (photos.length) items.push({ name: $("#paste-name").value.trim() && !$("#paste-text").value.trim() ? $("#paste-name").value.trim() : `Photos du ${new Date().toLocaleDateString("fr-FR")}${photos.length > 1 ? ` (${photos.length} pages)` : ""}`, photos });
@@ -1757,14 +1839,15 @@ async function readPhotos(files, onStatus) {
   const pages = [];
   for (let i = 0; i < files.length; i++) {
     onStatus?.(`Claude lit la photo ${i + 1} sur ${files.length}…`);
-    if (files[i].size > lim.images.maxInputBytes) throw new Error(`la photo ${files[i].name} est trop lourde`);
+    const img = await normalizeImage(files[i]);
+    if (img.size > lim.images.maxInputBytes) throw new Error(`la photo ${files[i].name} est trop lourde`);
     const { text } = await SAMPLE([
       "Recopie MOT POUR MOT tout le texte visible sur cette photo d'une page de cours ou de quiz de supply chain.",
       "- Garde la langue d'origine, les titres, la numérotation des questions et les lettres des propositions (A), B)…), une ligne par proposition.",
       "- Si une proposition est cochée, entourée ou surlignée comme bonne réponse, ajoute « (cochée) » à la fin de sa ligne. Si un corrigé est écrit, recopie-le (« Réponse : B »).",
       "- Recopie aussi le texte des tableaux et des schémas, ligne par ligne.",
       "- N'ajoute aucun commentaire. Si la photo ne contient pas de texte lisible, réponds seulement : (illisible).",
-    ].join("\n"), { images: [files[i]], cache: false });
+    ].join("\n"), { images: [img], cache: false });
     pages.push(`[[Page ${i + 1}]]\n${text.trim()}`);
   }
   return pages.join("\n\n");
@@ -2123,10 +2206,12 @@ function renderQuestion() {
     $("#qcard").className = "qcard " + topicClass(q.topic);
     $("#q-meta").innerHTML = `${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}${v.fr ? '<span class="pill c-violet">traduit en français</span>' : ""}`;
     $("#q-text").textContent = v.question;
-    const tb = $("#q-translate");
-    tb.disabled = !SAMPLE && !q.fr;
-    tb.lastChild.textContent = v.fr ? "Voir l'original" : q.fr ? "Voir en français" : "Traduire en français";
-    if (S.prog.showFr && !q.fr && SAMPLE && !translating.has(q.id)) translateQuestion(q).then(() => quiz && itemQ(quiz.session.items[quiz.idx]) === q && renderQuestion());
+    paintLangSwitches();
+    if (S.prog.showFr && !q.fr) {
+      translateThenRefresh(q);
+      const sw = document.querySelector("#qcard [data-langswitch]");
+      if (sw && SAMPLE) sw.insertAdjacentHTML("beforeend", `<span class="busy">traduction…</span>`);
+    }
     const fb = quiz.feedback[it.q];
     const chosen = quiz.answers[it.q];
     $("#q-choices").innerHTML = it.o.map((orig, i) => {
@@ -2219,7 +2304,9 @@ async function finishQuiz() {
   renderResult({ id: s.id, ...attempt });
 }
 
-function renderResult(a) {
+function renderResult(a, keepScroll = false) {
+  lastResult = a;
+  const y = window.scrollY;
   const details = a.items.map((it) => {
     const q = S.qById.get(it.q);
     return q ? { q, it, right: it.o.indexOf(q.answer), ok: it.a === it.o.indexOf(q.answer) } : null;
@@ -2242,22 +2329,24 @@ function renderResult(a) {
     <h2>Par thème</h2>
     <div class="bars">${Object.entries(byTopic).sort((x, y) => x[1].ok / x[1].total - y[1].ok / y[1].total).map(([t, o]) => bar(t, o.ok / o.total, `${o.ok} sur ${o.total}`)).join("")}</div>
     <div class="row">${wrongCount ? '<button type="button" class="fun" id="res-review">Réviser mes erreurs</button>' : ""}<button type="button" data-goto="home">Retour à l'accueil</button></div>
-    <div class="row between"><h2>Correction</h2><label class="flag" for="only-wrong"><input type="checkbox" id="only-wrong" checked> Seulement les erreurs</label></div>
+    <div class="row between"><h2>Correction</h2><div class="row"><span class="lang-switch" data-langswitch></span><label class="flag" for="only-wrong"><input type="checkbox" id="only-wrong" ${$("#only-wrong")?.checked === false ? "" : "checked"}> Seulement les erreurs</label></div></div>
     <div class="stack" id="corrs">${details.map((d, i) => `
       <div class="panel corr ${d.ok ? "ok" : "wrong"}">
         <div class="qhead"><strong>Q${i + 1}</strong>${topicPill(d.q.topic)}${flags.has(d.q.id) ? '<span class="pill amber">à revoir</span>' : ""}<span class="pill ${d.ok ? "good" : "bad"} push">${d.ok ? "Juste" : d.it.a === null ? "Sans réponse" : "Faux"}</span></div>
-        <p><strong>${esc(shown(d.q).question)}</strong></p>
+        <p><strong>${esc(shown(d.q).question)}</strong>${trLink(d.q)}</p>
         <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(shown(d.q).choices[orig])}</span></li>`).join("")}</ul>
         ${shown(d.q).explanation ? `<p class="expl">${esc(shown(d.q).explanation)}</p>` : ""}
         ${refHTML(d.q)}
         <div data-askslot="${d.q.id}" data-choice="${d.it.a === null ? "" : d.it.o[d.it.a]}"><button type="button" class="chip" data-openask>Je ne comprends pas : poser une question</button></div>
       </div>`).join("")}</div>`;
   setView("result");
+  if (keepScroll) window.scrollTo(0, y);
+  paintLangSwitches();
   document.querySelectorAll("#nav button").forEach((b) => b.removeAttribute("aria-current"));
   const toggle = () => v.querySelectorAll(".corr.ok").forEach((el) => el.classList.toggle("hidden", $("#only-wrong").checked));
   $("#only-wrong").onchange = toggle;
   toggle();
-  if (pct >= 0.6 && Date.now() - a.finishedAt < 5000) confetti(pct >= 0.8 ? 180 : 90);
+  if (!keepScroll && pct >= 0.6 && Date.now() - a.finishedAt < 5000) confetti(pct >= 0.8 ? 180 : 90);
   const rb = $("#res-review");
   if (rb) rb.onclick = () => startQuiz("review", Math.min(20, wrongCount), []);
 }
@@ -2279,6 +2368,7 @@ function bankFiltered() {
     (f !== "quiz" || q.origin === "quiz"));
 }
 function renderBank(reset) {
+  paintLangSwitches();
   if (reset) {
     bankShown = 0;
     const cur = $("#bank-topic").value;
@@ -2295,9 +2385,9 @@ function renderBank(reset) {
     return `<div class="panel" data-q="${q.id}">
       <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.disputed ? '<span class="pill bad">réponse discutable</span>' : q.guessed ? '<span class="pill amber">réponse pas encore vérifiée</span>' : ""}${q.altered ? '<span class="pill bad">texte différent du quiz ?</span>' : ""}
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
-      <p><strong>${esc(q.question)}</strong></p>
-      <ul class="opts">${q.choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
-      ${q.explanation ? `<p class="expl">${esc(q.explanation)}</p>` : ""}${refHTML(q)}</div>`;
+      <p><strong>${esc(shown(q).question)}</strong>${trLink(q)}</p>
+      <ul class="opts">${shown(q).choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
+      ${shown(q).explanation ? `<p class="expl">${esc(shown(q).explanation)}</p>` : ""}${refHTML(q)}</div>`;
   }).join(""));
   bankShown += page.length;
   $("#bank-more").classList.toggle("hidden", bankShown >= list.length);
