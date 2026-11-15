@@ -136,7 +136,7 @@ main { max-width: 1010px; margin: 0 auto; padding: 22px 16px 90px; }
 .hero .cta { grid-column: 1; display: flex; flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
 .hero .cta button { background: #fff; color: var(--teal-deep); border: 0; }
 .hero .cta button.alt { background: rgba(255,255,255,.18); color: #fff; }
-.ring { position: relative; width: 132px; height: 132px; z-index: 1; grid-column: 2; grid-row: 1 / span 2; }
+.ring { position: relative; width: 132px; height: 132px; z-index: 1; grid-column: 2; grid-row: 1; }
 .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring .ring-txt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1; }
 .ring b { font: 600 30px var(--font-display); }
@@ -291,6 +291,26 @@ button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; backgroun
 .tq > div { display: flex; flex-direction: column; gap: 4px; }
 .tq .lang { font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 @media (max-width: 720px) { .tq { grid-template-columns: 1fr; } }
+.actions { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) { .actions { grid-template-columns: 1fr; } }
+.action { background: var(--surface); border: 0; border-radius: 22px; padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; border-top: 7px solid var(--c); font: inherit; color: var(--ink); }
+button.action { cursor: pointer; transition: transform .12s; }
+button.action:hover { transform: translateY(-2px); border-color: var(--c); }
+.action h3 { font-size: 22px; color: var(--c); }
+.action .a-ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--cs); color: var(--c); }
+.action .a-ico svg { width: 24px; height: 24px; }
+.action .a-go { margin-top: auto; font-weight: 800; color: var(--c); }
+.theme-picks { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.theme-pick { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); width: 100%; }
+.theme-pick:hover { border-color: var(--c); background: var(--cs); }
+.theme-pick strong { color: var(--c); }
+.theme-pick small { grid-column: 1; }
+.theme-pick .go { grid-row: 1 / span 2; grid-column: 2; font-weight: 800; color: var(--c); }
+.theme-pick.today { border-color: var(--sun); background: var(--sun-soft); }
+details.panel > summary { cursor: pointer; list-style-position: outside; margin-left: 18px; }
+#bg-pill { position: fixed; left: 16px; bottom: 16px; z-index: 35; background: var(--surface); box-shadow: var(--shadow); border-radius: 99px; padding: 8px 10px 8px 16px; display: flex; gap: 10px; align-items: center; font-size: 14px; font-weight: 700; color: var(--teal-deep); border: 2px solid var(--teal-soft); }
+#bg-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); animation: twinkle 1s ease-in-out infinite alternate; }
+@media (max-width: 720px) { #bg-pill { bottom: 84px; left: 10px; right: 10px; justify-content: space-between; } }
 .picked { display: flex; flex-wrap: wrap; gap: 10px; }
 .picked:empty { display: none; }
 .picked figure { margin: 0; position: relative; width: 108px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
@@ -375,13 +395,10 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     </div>
     <nav id="nav" aria-label="Sections">
       <button type="button" data-view="home" aria-current="page"><svg><use href="#i-home"/></svg>Accueil</button>
-      <button type="button" data-view="sources"><svg><use href="#i-doc"/></svg>Thèmes</button>
-      <button type="button" data-view="generate"><svg><use href="#i-spark"/></svg>Créer</button>
-      <button type="button" data-view="practice"><svg><use href="#i-target"/></svg>Réviser</button>
-      <button type="button" data-view="exam"><svg><use href="#i-clock"/></svg>Examen</button>
-      <button type="button" data-view="bank"><svg><use href="#i-book"/></svg>Banque</button>
+      <button type="button" data-view="sources"><svg><use href="#i-doc"/></svg>Mes cours</button>
+      <button type="button" data-view="bank"><svg><use href="#i-book"/></svg>Questions</button>
       <button type="button" data-view="lexicon"><svg><use href="#i-lang"/></svg>Lexique</button>
-      <button type="button" data-view="history"><svg><use href="#i-chart"/></svg>Scores</button>
+      <button type="button" data-view="history"><svg><use href="#i-chart"/></svg>Résultats</button>
     </nav>
   </div>
 </header>
@@ -394,7 +411,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     <div class="hero">
       <div>
         <h1 id="home-title">Salut ! On révise la supply chain ?</h1>
-        <p id="hero-sub">Dépose tes cours, laisse Claude en tirer des QCM, puis entraîne-toi pour l'examen : 80 questions en 3 heures.</p>
+        <p id="hero-sub">Choisis ci-dessous comment réviser : un thème, tout mélangé, ou l'examen blanc.</p>
       </div>
       <div class="ring" aria-label="Objectif du jour">
         <svg id="tree-svg" viewBox="0 0 120 150" aria-hidden="true">
@@ -409,42 +426,56 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <svg id="ring-svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="12"/><circle id="ring-arc" cx="60" cy="60" r="50" fill="none" stroke="#f5b400" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
         <div class="ring-txt"><b id="ring-num">0</b><small id="ring-of">sur 40 aujourd'hui</small></div>
       </div>
-      <div class="cta">
-        <button type="button" id="today-btn" class="hidden"><svg><use href="#i-target"/></svg><span>Thème du jour</span></button>
-        <button type="button" id="mix-btn" class="alt"><svg><use href="#i-spark"/></svg>Tout mélanger</button>
-        <button type="button" id="quick-btn" class="hidden">20 questions rapides</button>
-        <button type="button" class="alt" data-goto="exam"><svg><use href="#i-clock"/></svg>Examen blanc</button>
-      </div>
     </div>
+    <div id="start-box" class="notice hidden">
+      <strong>Pour commencer : ajoute tes cours, ton livre et tes quiz.</strong>
+      <span>Range-les par thème. Claude prépare ensuite les questions tout seul : tu n'as plus qu'à réviser.</span>
+      <div><button type="button" class="primary" data-goto="sources"><svg><use href="#i-doc"/></svg>Ajouter mes cours</button></div>
+    </div>
+    <h2>Que veux-tu faire ?</h2>
+    <div class="actions">
+      <div class="action c-teal">
+        <span class="a-ico"><svg><use href="#i-target"/></svg></span>
+        <h3>Réviser un thème</h3>
+        <p class="hint">20 questions qui mélangent ton quiz, ton cours et ton livre. Choisis le thème :</p>
+        <div id="theme-picks" class="theme-picks"></div>
+      </div>
+      <button type="button" class="action c-orange" id="all-btn">
+        <span class="a-ico"><svg><use href="#i-spark"/></svg></span>
+        <h3>Tout réviser</h3>
+        <span class="hint">20 questions au hasard, tous les thèmes mélangés.</span>
+        <span class="a-go">C'est parti →</span>
+      </button>
+      <button type="button" class="action c-violet" id="exam-btn">
+        <span class="a-ico"><svg><use href="#i-clock"/></svg></span>
+        <h3>Examen blanc</h3>
+        <span class="hint">80 questions, 3 heures, sur tous les thèmes. Correction à la fin.</span>
+        <span class="a-go">Commencer l'examen →</span>
+      </button>
+    </div>
+    <div class="row"><button type="button" class="link" id="errors-btn">Revoir seulement mes erreurs</button></div>
     <div id="resume-box" class="notice hidden">
       <strong>Une série est en cours.</strong>
       <div class="row"><button type="button" class="primary" id="resume-btn">Reprendre</button><button type="button" id="drop-cur-btn">L'abandonner</button></div>
     </div>
     <div class="tiles" id="home-tiles"></div>
-    <div class="panel">
-      <div class="row between"><h2>Mes réglages</h2></div>
+    <details class="panel">
+      <summary><strong>Mes réglages</strong> (date d'examen, objectif du jour, Noël)</summary>
       <div class="row">
         <label class="field" for="exam-date">Date de mon examen<input type="date" id="exam-date"></label>
         <label class="field" for="daily-goal">Objectif : questions par jour<input type="number" id="daily-goal" min="5" max="500" step="5" value="40"></label>
       </div>
       <label class="flag" for="noel-toggle" style="color:var(--ink)"><input type="checkbox" id="noel-toggle" checked> Ambiance de Noël (neige, sapin, guirlande)</label>
-    </div>
-    <h2>Par où commencer</h2>
-    <ol class="steps" id="home-steps">
-      <li id="step-1" class="c-teal"><strong>Dépose tes documents</strong><span class="hint">Le PDF du cours, le livre, le quiz d'entraînement de l'école.</span><button type="button" class="link" data-goto="sources">Mes documents</button></li>
-      <li id="step-2" class="c-orange"><strong>Crée des questions</strong><span class="hint">Claude lit tes documents et rédige des QCM corrigés et expliqués.</span><button type="button" class="link" data-goto="generate">Créer des questions</button></li>
-      <li id="step-3" class="c-sun"><strong>Entraîne-toi</strong><span class="hint">Par thème, avec la correction après chaque réponse.</span><button type="button" class="link" data-goto="practice">S'entraîner</button></li>
-      <li id="step-4" class="c-violet"><strong>Passe un examen blanc</strong><span class="hint">80 questions, chrono de 3 h, note sur 20.</span><button type="button" class="link" data-goto="exam">Examen blanc</button></li>
-    </ol>
-    <h2>Mes thèmes de cours</h2>
-    <div id="home-themes" class="themes"></div>
-    <h2>Mes notions à retravailler</h2>
-    <div id="home-topics" class="bars panel"></div>
+    </details>
+    <details class="panel">
+      <summary><strong>Mes notions à retravailler</strong></summary>
+      <div id="home-topics" class="bars"></div>
+    </details>
   </section>
 
   <!-- DOCUMENTS -->
   <section id="view-sources" class="view" aria-labelledby="src-title">
-    <div class="page-title"><span class="ico c-teal" style="background:var(--cs);color:var(--c)"><svg><use href="#i-doc"/></svg></span><h1 id="src-title">Mes thèmes et documents</h1></div>
+    <div class="page-title"><span class="ico c-teal" style="background:var(--cs);color:var(--c)"><svg><use href="#i-doc"/></svg></span><h1 id="src-title">Mes cours</h1></div>
     <div class="panel">
       <h2>Mes thèmes de cours</h2>
       <p class="hint">Crée un thème par chapitre vu en classe (par exemple tes 12 thèmes), puis range chaque document dans son thème. Tu pourras ensuite réviser thème par thème.</p>
@@ -605,7 +636,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 
   <!-- BANQUE -->
   <section id="view-bank" class="view" aria-labelledby="bank-title">
-    <div class="page-title"><span class="ico c-pink" style="background:var(--cs);color:var(--c)"><svg><use href="#i-book"/></svg></span><h1 id="bank-title">Mes questions</h1></div>
+    <div class="page-title"><span class="ico c-pink" style="background:var(--cs);color:var(--c)"><svg><use href="#i-book"/></svg></span><h1 id="bank-title">Mes questions</h1></div><p class="lead">Toutes tes questions : celles de tes quiz et celles que Claude a créées à partir de tes cours et de ton livre.</p><div style="display:none"></div>
     <div class="row">
       <input type="search" id="bank-search" placeholder="Rechercher un mot" style="flex:2 1 200px;width:auto" aria-label="Rechercher">
       <select id="bank-theme" style="flex:1 1 160px;width:auto" aria-label="Thème de cours"></select>
@@ -617,6 +648,14 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     <div class="row between"><p class="hint" id="bank-count"></p>
       <div class="row"><span class="lang-switch" data-langswitch></span><button type="button" class="small" id="bank-verify"><svg><use href="#i-check"/></svg>Vérifier les réponses non vérifiées</button><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
     <div id="clean-panel" class="panel hidden"></div>
+    <details class="panel">
+      <summary><strong>Options avancées</strong> (créer des questions moi-même, choisir des notions précises, régler l'examen)</summary>
+      <div class="row">
+        <button type="button" class="small" data-goto="generate"><svg><use href="#i-spark"/></svg>Créer des questions moi-même</button>
+        <button type="button" class="small" data-goto="practice"><svg><use href="#i-target"/></svg>Réviser des notions précises</button>
+        <button type="button" class="small" data-goto="exam"><svg><use href="#i-clock"/></svg>Examen personnalisé</button>
+      </div>
+    </details>
     <div id="bank-list" class="stack"></div>
     <div><button type="button" id="bank-more" class="hidden">Afficher plus</button></div>
   </section>
@@ -661,6 +700,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 </div>
 <canvas id="snow" aria-hidden="true"></canvas>
 <canvas id="confetti" aria-hidden="true"></canvas>
+<div id="bg-pill" class="hidden" role="status"><span class="dot"></span><span id="bg-text">Claude prépare tes questions…</span><button type="button" class="small" id="bg-stop">Pause</button></div>
 <dialog id="prep"><div class="stack"><strong id="prep-title">Claude prépare tes questions…</strong><p id="prep-text" class="hint"></p><div class="progress"><div id="prep-bar" style="width:15%"></div></div><div class="row" style="justify-content:flex-end"><button type="button" id="prep-skip">Commencer sans attendre</button></div></div></dialog>
 <dialog id="dlg"><p id="dlg-text"></p><div class="row" id="dlg-btns"></div></dialog>
 <div id="toast" class="toast hidden" role="status"></div>
@@ -1700,7 +1740,7 @@ function renderHome() {
     : h < 12 ? "Bonjour ! On révise la supply chain ?" : h < 18 ? "Bon après-midi ! Une petite série ?" : "Bonsoir ! Encore quelques questions ?";
   $("#hero-sub").textContent = j !== null && j >= 0
     ? (j === 0 ? "C'est le jour de l'examen. Tu as bien travaillé, fais-toi confiance !" : `Plus que ${j} jour${j > 1 ? "s" : ""} avant l'examen. ${done >= goal ? "Tu peux continuer pour prendre de l'avance." : `Encore ${goal - done} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour.`}`)
-    : S.questions.length ? `Encore ${Math.max(0, goal - done)} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour. Indique la date de ton examen plus bas pour voir le compte à rebours.` : "Dépose tes cours, laisse Claude en tirer des QCM, puis entraîne-toi pour l'examen : 80 questions en 3 heures.";
+    : S.questions.length ? `Encore ${Math.max(0, goal - done)} question${goal - done > 1 ? "s" : ""} pour ton objectif du jour. Indique la date de ton examen dans « Mes réglages », plus bas, pour voir le compte à rebours.` : "Choisis ci-dessous comment réviser : un thème, tout mélangé, ou l'examen blanc.";
   $("#home-tiles").innerHTML = `
     <div class="tile c-orange">${tileIco("i-flame")}<b>${streak}</b><span>jour${streak > 1 ? "s" : ""} d'affilée</span></div>
     <div class="tile c-violet">${tileIco("i-cal")}<b>${j === null ? "–" : j < 0 ? "passé" : "J-" + j}</b><span>avant l'examen</span></div>
@@ -1709,29 +1749,23 @@ function renderHome() {
   $("#exam-date").value = S.prog.examDate || "";
   $("#noel-toggle").checked = isNoel();
   $("#daily-goal").value = goal;
-  $("#step-1").classList.toggle("done", S.sources.length > 0);
-  $("#step-2").classList.toggle("done", S.questions.some((q) => q.origin === "ia"));
-  $("#step-3").classList.toggle("done", S.attempts.some((a) => a.mode !== "exam"));
-  $("#step-4").classList.toggle("done", exams.length > 0);
   $("#resume-box").classList.toggle("hidden", !(S.cur && S.cur.session));
   const tod = themeOfTheDay();
-  $("#today-btn").classList.toggle("hidden", !tod);
-  if (tod) { $("#today-btn").dataset.theme = tod.id; $("#today-btn span").textContent = `Thème du jour : ${tod.name}`; }
-  $("#mix-btn").lastChild.textContent = tod ? "Tout mélanger" : "20 questions mélangées";
-  const lastRev = (id) => { const d = (S.prog.themeLast || {})[id]; if (!d) return "pas encore révisé"; if (d === today()) return "révisé aujourd'hui"; const [y, m, dd] = d.split("-"); return `révisé le ${dd}/${m}`; };
-  $("#home-themes").innerHTML = S.themes.length
+  const hasDocs = S.sources.some((x) => x.kind !== "quiz") || S.questions.length;
+  $("#start-box").classList.toggle("hidden", !!hasDocs);
+  $("#theme-picks").innerHTML = S.themes.length
     ? S.themes.map((th) => {
         const qs = S.questions.filter((q) => themeOfQ(q) === th.id);
         let seen = 0, wrong = 0;
         for (const q of qs) { const st = statOf(q.id); seen += st[0]; wrong += st[1]; }
-        const rate = seen ? Math.max(0, 1 - wrong / seen) : null;
-        const pct = rate === null ? 0 : Math.round(rate * 100);
-        return `<div class="theme-card ${themeClass(th.id)}"><h3>${esc(th.name)}</h3>
-          <small>${fr(qs.length)} questions · ${lastRev(th.id)}${rate === null ? "" : ` · ${pct} % de réussite`}</small>${tod && tod.id === th.id ? '<span class="pill amber" style="align-self:flex-start">Thème du jour</span>' : ""}
-          <div class="bar-track"><div class="bar-fill ${rate === null ? "" : pct >= 70 ? "good" : pct >= 50 ? "mid" : "bad"}" style="width:${pct}%"></div></div>
-          <div class="row"><button type="button" class="small primary" data-home-theme="${th.id}" ${qs.length || S.sources.some((x) => x.themeId === th.id) ? "" : "disabled"}>Réviser ce thème</button></div></div>`;
+        const pct = seen ? Math.round(Math.max(0, 1 - wrong / seen) * 100) : null;
+        const ok = qs.length || S.sources.some((x) => x.themeId === th.id);
+        return `<button type="button" class="theme-pick ${themeClass(th.id)} ${tod && tod.id === th.id ? "today" : ""}" data-home-theme="${th.id}" ${ok ? "" : "disabled"}>
+          <strong>${esc(th.name)}${tod && tod.id === th.id ? ' <span class="pill amber">thème du jour</span>' : ""}</strong>
+          <small>${lastRevTxt(th.id)}${pct === null ? "" : ` · ${pct} % de réussite`}${ok ? "" : " · aucun document"}</small>
+          <span class="go">Réviser →</span></button>`;
       }).join("")
-    : `<p class="hint">Crée tes thèmes de cours dans l'onglet « Thèmes » pour suivre ta progression chapitre par chapitre.</p>`;
+    : `<p class="hint">Crée tes thèmes dans « Mes cours » et ranges-y tes documents.</p>`;
   const t = topicTable().filter((x) => x.seen > 0).sort((a, b) => a.rate - b.rate);
   $("#home-topics").innerHTML = t.length
     ? t.slice(0, 8).map((x) => bar(x.topic, x.rate, `${x.count} questions`)).join("")
@@ -1739,10 +1773,11 @@ function renderHome() {
 }
 $("#exam-date").addEventListener("change", (e) => { S.prog.examDate = e.target.value; saveProgress(); renderHome(); });
 $("#daily-goal").addEventListener("change", (e) => { S.prog.goal = Math.max(5, Math.min(500, Number(e.target.value) || 40)); saveProgress(); renderHome(); });
-$("#quick-btn").addEventListener("click", () => startQuiz("practice", 20, []));
-$("#mix-btn").addEventListener("click", () => startQuiz("practice", 20, []));
-$("#today-btn").addEventListener("click", (e) => reviseTheme(e.currentTarget.dataset.theme));
-$("#home-themes").addEventListener("click", (e) => { const id = e.target.dataset.homeTheme; if (id) reviseTheme(id); });
+function lastRevTxt(id) { const d = (S.prog.themeLast || {})[id]; if (!d) return "pas encore révisé"; if (d === today()) return "révisé aujourd'hui"; const [, m, dd] = d.split("-"); return `révisé le ${dd}/${m}`; }
+$("#theme-picks").addEventListener("click", (e) => { const b = e.target.closest("[data-home-theme]"); if (b) reviseTheme(b.dataset.homeTheme); });
+$("#all-btn").addEventListener("click", () => reviseAll());
+$("#exam-btn").addEventListener("click", () => startFullExam());
+$("#errors-btn").addEventListener("click", () => startQuiz("review", 20, []));
 
 /** Thème du jour : celui qui n'a jamais été révisé, sinon celui révisé il y a le plus longtemps. */
 function themeOfTheDay() {
@@ -1755,11 +1790,13 @@ function themeOfTheDay() {
 }
 
 /** Génère `count` nouvelles questions à partir des cours et livres d'un thème (un ou deux lots). */
-async function generateForTheme(themeId, count, signal, onStatus) {
-  const docs = S.sources.filter((x) => x.themeId === themeId && x.kind !== "quiz");
+function generateForTheme(themeId, count, signal, onStatus) {
+  return generateForDocs(S.sources.filter((x) => x.themeId === themeId && x.kind !== "quiz"), count, signal, onStatus, themeId);
+}
+async function generateForDocs(docs, count, signal, onStatus, themeId = "") {
   if (!docs.length || !SAMPLE) return 0;
   const parts = [];
-  for (const d of docs) (await chunksOf(d.id)).forEach((c) => parts.push({ sourceId: d.id, name: d.name, text: c.text, n: c.n }));
+  for (const d of docs) (await chunksOf(d.id)).forEach((c) => parts.push({ sourceId: d.id, name: d.name, text: c.text, n: c.n, themeId: d.themeId }));
   if (!parts.length) return 0;
   // On commence par les passages qui ont donné le moins de questions.
   const used = (pt) => S.questions.filter((q) => q.sourceId === pt.sourceId && q.ref?.page && pt.text.includes(`[[Page ${q.ref.page}]]`)).length;
@@ -1775,37 +1812,117 @@ async function generateForTheme(themeId, count, signal, onStatus) {
     round++;
     onStatus?.(`Lecture de « ${part.name} »${part.n !== undefined ? `, partie ${part.n + 1}` : ""}…`, made / count);
     const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
-    const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, Math.min(20, perCall, count - made), "", existing, S.prog.genLang || "same", quizExamples(themeId), true), { signal, cache: false });
+    const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, Math.min(20, perCall, count - made), "", existing, S.prog.genLang || "same", quizExamples(themeId || part.themeId), true), { signal, cache: false });
     const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4).map((q) => ({ ...q, ref: checkRef(q, part.text) }));
     made += await addQuestions(list, part.sourceId, "ia");
   }
   return made;
 }
 
+// Fenêtre « Claude prépare tes questions » pendant une création au premier plan.
+let fgBusy = false;
+async function withPrep(title, text, canSkip, job) {
+  const dlg = $("#prep"), ctl = new AbortController();
+  fgBusy = true;
+  $("#prep-title").textContent = title;
+  $("#prep-text").textContent = text;
+  $("#prep-bar").style.width = "10%";
+  $("#prep-skip").disabled = !canSkip;
+  $("#prep-skip").onclick = () => ctl.abort();
+  dlg.oncancel = (e) => { e.preventDefault(); if (canSkip) ctl.abort(); };
+  dlg.showModal();
+  let made = 0;
+  try {
+    made = await job(ctl.signal, (msg, ratio) => { $("#prep-text").textContent = msg; $("#prep-bar").style.width = `${Math.max(10, Math.min(100, ratio * 100))}%`; });
+    if (made) toast(`${made} nouvelles questions prêtes.`);
+  } catch (e) {
+    if (e?.code !== "cancelled") toast(SAMPLE_ERRORS[e?.code] || "Préparation interrompue : on continue avec les questions déjà prêtes.", true);
+  }
+  dlg.close();
+  fgBusy = false;
+  return made;
+}
+const docCount = (d) => S.questions.filter((q) => q.sourceId === d.id).length;
+const contentDocs = () => S.sources.filter((x) => x.kind !== "quiz");
+
+/** « Tout réviser » : complète avec des questions du document le moins exploité si besoin. */
+async function reviseAll() {
+  startBgFill();
+  const fresh = S.questions.filter((q) => statOf(q.id)[0] === 0 && q.origin !== "quiz");
+  const docs = contentDocs();
+  if (fresh.length < 20 && docs.length && SAMPLE) {
+    await withPrep("Claude prépare de nouvelles questions", "Tirées de tes cours et de ton livre, sur tous les thèmes. Environ une minute.", S.questions.length > 0, async (signal, onStatus) => {
+      const pick = [...docs].sort((a, b) => docCount(a) - docCount(b)).slice(0, 2);
+      return generateForDocs(pick, 20, signal, onStatus);
+    });
+  }
+  if (!S.questions.length) return toast("Ajoute d'abord tes cours et tes quiz dans « Mes cours ».", true);
+  startQuiz("practice", 20, []);
+}
+
+/** Examen blanc : 80 questions, 3 heures ; complète la banque si elle en a moins de 80. */
+async function startFullExam() {
+  const need = 80 - S.questions.length;
+  if (!(await ask("Examen blanc : 80 questions sur tous les thèmes, 3 heures, correction à la fin. Prête ou prêt ?", [["Pas maintenant", false], ["Commencer", true]]))) return;
+  const docs = contentDocs();
+  if (need > 0 && docs.length && SAMPLE) {
+    await withPrep(`Claude prépare ${need} questions pour compléter ton examen`, "Il pioche dans tous tes thèmes. Compte environ une minute pour 20 questions.", S.questions.length > 0, async (signal, onStatus) => {
+      let made = 0;
+      for (let round = 0; made < need && round < 8 && !signal.aborted; round++) {
+        const d = [...docs].sort((a, b) => docCount(a) - docCount(b))[0];
+        made += await generateForDocs([d], Math.min(20, need - made), signal, (m) => onStatus(m, made / need));
+      }
+      return made;
+    });
+  }
+  if (!S.questions.length) return toast("Ajoute d'abord tes cours et tes quiz dans « Mes cours ».", true);
+  startQuiz("exam", 80, [], 180);
+}
+
+// Préparation en arrière-plan : chaque cours ou livre reçoit des questions (8 par partie, entre 20 et 60),
+// un lot à la fois, tant que la page est ouverte. S'arrête pendant une préparation au premier plan.
+let bgRunning = false, bgPaused = false;
+const docTarget = (d) => Math.max(20, Math.min(60, (d.chunkCount || 1) * 8));
+function startBgFill() {
+  if (bgRunning || bgPaused || !SAMPLE || !ROOT) return;
+  bgRunning = true;
+  (async () => {
+    let fails = 0;
+    while (!bgPaused && fails < 2) {
+      if (fgBusy || genCtl) { await new Promise((r) => setTimeout(r, 3000)); continue; }
+      const todo = contentDocs().filter((d) => docCount(d) < docTarget(d)).sort((a, b) => docCount(a) / docTarget(a) - docCount(b) / docTarget(b));
+      if (!todo.length) break;
+      const total = contentDocs().reduce((n, d) => n + docTarget(d), 0);
+      const have = contentDocs().reduce((n, d) => n + Math.min(docCount(d), docTarget(d)), 0);
+      $("#bg-text").textContent = `Claude prépare tes questions en arrière-plan : ${have} / ${total}`;
+      $("#bg-pill").classList.remove("hidden");
+      try {
+        const made = await generateForDocs([todo[0]], 20, new AbortController().signal);
+        fails = made ? 0 : fails + 1;
+        if (!made) todo[0].bgDone = true;
+      } catch (e) {
+        fails++;
+        if (FATAL.has(e?.code)) break;
+      }
+      if ($("#view-home").classList.contains("active")) renderHome();
+    }
+    bgRunning = false;
+    $("#bg-pill").classList.add("hidden");
+  })();
+}
+$("#bg-stop").addEventListener("click", () => { bgPaused = true; $("#bg-pill").classList.add("hidden"); toast("Préparation en pause. Elle reprendra à ta prochaine révision."); setTimeout(() => (bgPaused = false), 1000); });
+
 async function reviseTheme(themeId) {
+  startBgFill();
   const th = themeById(themeId);
   if (!th) return;
   const inTheme = S.questions.filter((q) => themeOfQ(q) === themeId);
   const fresh = inTheme.filter((q) => statOf(q.id)[0] === 0 && q.origin !== "quiz");
   const hasDocs = S.sources.some((x) => x.themeId === themeId && x.kind !== "quiz");
   if (fresh.length < 20 && hasDocs && SAMPLE) {
-    const dlg = $("#prep"), ctl = new AbortController();
-    $("#prep-title").textContent = `Claude prépare de nouvelles questions sur « ${th.name} »`;
-    $("#prep-text").textContent = "À partir de ton livre et de ton cours, en s'inspirant de tes quiz. Environ une minute.";
-    $("#prep-bar").style.width = "10%";
-    $("#prep-skip").disabled = !inTheme.length;
-    $("#prep-skip").onclick = () => ctl.abort();
-    dlg.oncancel = (e) => { e.preventDefault(); if (inTheme.length) ctl.abort(); };
-    dlg.showModal();
-    try {
-      const made = await generateForTheme(themeId, 20, ctl.signal, (msg, ratio) => { $("#prep-text").textContent = msg; $("#prep-bar").style.width = `${Math.max(10, ratio * 100)}%`; });
-      if (made) toast(`${made} nouvelles questions créées pour « ${th.name} ».`);
-    } catch (e) {
-      if (e?.code !== "cancelled") toast(SAMPLE_ERRORS[e?.code] || "Création interrompue : on révise avec les questions déjà prêtes.", true);
-    }
-    dlg.close();
+    await withPrep(`Claude prépare de nouvelles questions sur « ${th.name} »`, "À partir de ton livre et de ton cours, en s'inspirant de tes quiz. Environ une minute.", inTheme.length > 0, (signal, onStatus) => generateForTheme(themeId, 20, signal, onStatus));
   }
-  if (!S.questions.some((q) => themeOfQ(q) === themeId)) return toast(`Pas encore de question pour « ${th.name} » : range ses documents dans ce thème (onglet « Thèmes »).`, true);
+  if (!S.questions.some((q) => themeOfQ(q) === themeId)) return toast(`Pas encore de question pour « ${th.name} » : range ses documents dans ce thème (onglet « Mes cours »).`, true);
   startQuiz("practice", 20, [], 180, [themeId]);
 }
 function topicTable() {
@@ -1933,6 +2050,7 @@ $("#upload-form").addEventListener("submit", async (e) => {
   }
   status.textContent = "";
   btn.disabled = false;
+  if (contentDocs().some((d) => docCount(d) < docTarget(d)) && SAMPLE) { logTo(log, "Claude prépare maintenant les questions de tes cours en arrière-plan. Tu peux déjà réviser."); startBgFill(); }
   pickedFiles = []; showPicked(); $("#file-input").value = ""; $("#paste-text").value = ""; $("#paste-name").value = "";
   renderSources();
 });
@@ -2253,6 +2371,18 @@ function pickMixed(pool, count) {
   const rest = pickStratified(pool.filter((q) => !used.has(q.id)), Math.max(0, count - picked.length));
   return shuffle([...picked, ...rest]).slice(0, count);
 }
+// Sur tous les thèmes : chaque thème reçoit une part proportionnelle (au moins une question).
+function pickByTheme(pool, count) {
+  if (pool.length <= count) return shuffle(pool);
+  const by = new Map();
+  for (const q of pool) { const t = themeOfQ(q) || "-"; if (!by.has(t)) by.set(t, []); by.get(t).push(q); }
+  if (by.size < 2) return pickMixed(pool, count);
+  const picked = [];
+  for (const list of by.values()) picked.push(...pickMixed(list, Math.min(list.length, Math.max(1, Math.round((list.length / pool.length) * count)))));
+  const used = new Set(picked.map((q) => q.id));
+  const rest = pickMixed(pool.filter((q) => !used.has(q.id)), Math.max(0, count - picked.length));
+  return shuffle([...picked, ...rest]).slice(0, count);
+}
 function buildSession(mode, count, topics = [], durationMin = 180, themes = []) {
   let pool = S.questions;
   if (themes.length) pool = pool.filter((q) => themes.includes(themeOfQ(q)));
@@ -2264,7 +2394,7 @@ function buildSession(mode, count, topics = [], durationMin = 180, themes = []) 
   if (!pool.length) throw new Error("Ta banque n'a pas encore de questions. Dépose tes documents puis crée des questions.");
   const chosen = mode === "review"
     ? shuffle([...pool].sort((a, b) => statOf(b.id)[1] / Math.max(1, statOf(b.id)[0]) - statOf(a.id)[1] / Math.max(1, statOf(a.id)[0])).slice(0, count))
-    : pickMixed(pool, count);
+    : themes.length === 1 || topics.length ? pickMixed(pool, count) : pickByTheme(pool, count);
   return {
     id: "a" + rid(), mode, startedAt: Date.now(),
     durationSec: mode === "exam" ? Math.round(durationMin * 60) : null,
