@@ -410,7 +410,9 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <div class="ring-txt"><b id="ring-num">0</b><small id="ring-of">sur 40 aujourd'hui</small></div>
       </div>
       <div class="cta">
-        <button type="button" id="quick-btn"><svg><use href="#i-target"/></svg>20 questions rapides</button>
+        <button type="button" id="today-btn" class="hidden"><svg><use href="#i-target"/></svg><span>Thème du jour</span></button>
+        <button type="button" id="mix-btn" class="alt"><svg><use href="#i-spark"/></svg>Tout mélanger</button>
+        <button type="button" id="quick-btn" class="hidden">20 questions rapides</button>
         <button type="button" class="alt" data-goto="exam"><svg><use href="#i-clock"/></svg>Examen blanc</button>
       </div>
     </div>
@@ -455,7 +457,8 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
     <h2>Ajouter des documents</h2>
     <form id="upload-form" class="panel">
       <div class="seg" role="radiogroup" aria-label="Type de document">
-        <label><input type="radio" name="kind" value="course" checked> Un cours ou un livre</label>
+        <label><input type="radio" name="kind" value="course" checked> Un cours</label>
+        <label><input type="radio" name="kind" value="book"> Un livre</label>
         <label><input type="radio" name="kind" value="quiz"> Un quiz (questions d'entraînement)</label>
       </div>
       <p class="hint" id="kind-hint">Claude s'en servira pour créer de nouvelles questions.</p>
@@ -658,6 +661,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
 </div>
 <canvas id="snow" aria-hidden="true"></canvas>
 <canvas id="confetti" aria-hidden="true"></canvas>
+<dialog id="prep"><div class="stack"><strong id="prep-title">Claude prépare tes questions…</strong><p id="prep-text" class="hint"></p><div class="progress"><div id="prep-bar" style="width:15%"></div></div><div class="row" style="justify-content:flex-end"><button type="button" id="prep-skip">Commencer sans attendre</button></div></div></dialog>
 <dialog id="dlg"><p id="dlg-text"></p><div class="row" id="dlg-btns"></div></dialog>
 <div id="toast" class="toast hidden" role="status"></div>
 
@@ -830,6 +834,9 @@ function streakDays() {
   }
 }
 function record(qid, correct) {
+  const thq = S.qById.get(qid);
+  const th = thq ? themeOfQ(thq) : "";
+  if (th) { S.prog.themeLast ||= {}; S.prog.themeLast[th] = today(); }
   S.prog.days[today()] = (S.prog.days[today()] || 0) + 1;
   saveProgress();
   const s = (S.stats[qid] ||= [0, 0]);
@@ -853,6 +860,18 @@ const TOPIC_COLORS = ["c-teal", "c-orange", "c-violet", "c-pink", "c-sun", "c-go
 const topicClass = (t) => { let h = 0; for (const c of String(t)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return TOPIC_COLORS[h % TOPIC_COLORS.length]; };
 const topicPill = (t) => `<span class="pill ${topicClass(t)}">${esc(t)}</span>`;
 // Thèmes de cours : chaque document est rangé dans un thème ; ses questions en héritent.
+const KIND_LABEL = { course: "Cours", book: "Livre", quiz: "Quiz" };
+const srcOf = (q) => S.sources.find((x) => x.id === q.sourceId);
+/** « Reprise du quiz … », « Créée à partir du livre, p. 45 », « Créée à partir du cours … ». */
+function originPill(q) {
+  const src = srcOf(q);
+  const page = q.ref?.page ? `, ${src?.media === "photos" ? "photo" : "p."} ${q.ref.page}` : "";
+  if (q.origin === "quiz") return `<span class="pill amber">Reprise du quiz${src ? ` « ${esc(src.name)} »` : ""}${page}</span>`;
+  if (!src) return `<span class="pill plain">Créée par Claude</span>`;
+  return src.kind === "book"
+    ? `<span class="pill c-violet">Créée à partir du livre « ${esc(src.name)} »${page}</span>`
+    : `<span class="pill c-teal">Créée à partir du cours « ${esc(src.name)} »${page}</span>`;
+}
 const themeById = (id) => S.themes.find((t) => t.id === id);
 const themeClass = (id) => TOPIC_COLORS[Math.max(0, S.themes.findIndex((t) => t.id === id)) % TOPIC_COLORS.length];
 const themeOfQ = (q) => S.sources.find((x) => x.id === q.sourceId)?.themeId || "";
@@ -1383,7 +1402,7 @@ function refHTML(q) {
   const src = S.sources.find((x) => x.id === q.sourceId);
   if (!src) return "";
   const where = q.ref?.page ? `${src.media === "photos" ? "photo" : "page"} ${q.ref.page}` : "";
-  return `<div class="ref"><svg width="16" height="16"><use href="#i-book"/></svg><span><strong>Source :</strong> ${src.kind === "quiz" ? "quiz" : "cours"} « ${esc(src.name)} »${where ? `, <strong>${where}</strong>` : ""}${q.ref?.quote ? `<br><em>« ${esc(q.ref.quote)} »</em>` : ""}${!q.ref && SAMPLE ? ` <button type="button" class="link" data-findref="${q.id}">Retrouver la page</button>` : ""}</span></div>`;
+  return `<div class="ref"><svg width="16" height="16"><use href="#i-book"/></svg><span><strong>Source :</strong> ${(KIND_LABEL[src.kind] || "Cours").toLowerCase()} « ${esc(src.name)} »${where ? `, <strong>${where}</strong>` : ""}${q.ref?.quote ? `<br><em>« ${esc(q.ref.quote)} »</em>` : ""}${!q.ref && SAMPLE ? ` <button type="button" class="link" data-findref="${q.id}">Retrouver la page</button>` : ""}</span></div>`;
 }
 // Pour les questions sans référence : on cherche les passages les plus proches, puis Claude pointe la page.
 async function findRef(q) {
@@ -1695,6 +1714,11 @@ function renderHome() {
   $("#step-3").classList.toggle("done", S.attempts.some((a) => a.mode !== "exam"));
   $("#step-4").classList.toggle("done", exams.length > 0);
   $("#resume-box").classList.toggle("hidden", !(S.cur && S.cur.session));
+  const tod = themeOfTheDay();
+  $("#today-btn").classList.toggle("hidden", !tod);
+  if (tod) { $("#today-btn").dataset.theme = tod.id; $("#today-btn span").textContent = `Thème du jour : ${tod.name}`; }
+  $("#mix-btn").lastChild.textContent = tod ? "Tout mélanger" : "20 questions mélangées";
+  const lastRev = (id) => { const d = (S.prog.themeLast || {})[id]; if (!d) return "pas encore révisé"; if (d === today()) return "révisé aujourd'hui"; const [y, m, dd] = d.split("-"); return `révisé le ${dd}/${m}`; };
   $("#home-themes").innerHTML = S.themes.length
     ? S.themes.map((th) => {
         const qs = S.questions.filter((q) => themeOfQ(q) === th.id);
@@ -1703,9 +1727,9 @@ function renderHome() {
         const rate = seen ? Math.max(0, 1 - wrong / seen) : null;
         const pct = rate === null ? 0 : Math.round(rate * 100);
         return `<div class="theme-card ${themeClass(th.id)}"><h3>${esc(th.name)}</h3>
-          <small>${fr(qs.length)} questions${rate === null ? " · pas encore travaillé" : ` · ${pct} % de réussite`}</small>
+          <small>${fr(qs.length)} questions · ${lastRev(th.id)}${rate === null ? "" : ` · ${pct} % de réussite`}</small>${tod && tod.id === th.id ? '<span class="pill amber" style="align-self:flex-start">Thème du jour</span>' : ""}
           <div class="bar-track"><div class="bar-fill ${rate === null ? "" : pct >= 70 ? "good" : pct >= 50 ? "mid" : "bad"}" style="width:${pct}%"></div></div>
-          <div class="row"><button type="button" class="small primary" data-home-theme="${th.id}" ${qs.length ? "" : "disabled"}>Réviser ce thème</button></div></div>`;
+          <div class="row"><button type="button" class="small primary" data-home-theme="${th.id}" ${qs.length || S.sources.some((x) => x.themeId === th.id) ? "" : "disabled"}>Réviser ce thème</button></div></div>`;
       }).join("")
     : `<p class="hint">Crée tes thèmes de cours dans l'onglet « Thèmes » pour suivre ta progression chapitre par chapitre.</p>`;
   const t = topicTable().filter((x) => x.seen > 0).sort((a, b) => a.rate - b.rate);
@@ -1716,7 +1740,74 @@ function renderHome() {
 $("#exam-date").addEventListener("change", (e) => { S.prog.examDate = e.target.value; saveProgress(); renderHome(); });
 $("#daily-goal").addEventListener("change", (e) => { S.prog.goal = Math.max(5, Math.min(500, Number(e.target.value) || 40)); saveProgress(); renderHome(); });
 $("#quick-btn").addEventListener("click", () => startQuiz("practice", 20, []));
-$("#home-themes").addEventListener("click", (e) => { const id = e.target.dataset.homeTheme; if (id) startQuiz("practice", 20, [], 180, [id]); });
+$("#mix-btn").addEventListener("click", () => startQuiz("practice", 20, []));
+$("#today-btn").addEventListener("click", (e) => reviseTheme(e.currentTarget.dataset.theme));
+$("#home-themes").addEventListener("click", (e) => { const id = e.target.dataset.homeTheme; if (id) reviseTheme(id); });
+
+/** Thème du jour : celui qui n'a jamais été révisé, sinon celui révisé il y a le plus longtemps. */
+function themeOfTheDay() {
+  const last = S.prog.themeLast || {};
+  const usable = S.themes.filter((t) => S.questions.some((q) => themeOfQ(q) === t.id) || S.sources.some((x) => x.themeId === t.id));
+  if (!usable.length) return null;
+  const todays = usable.find((t) => last[t.id] === today());
+  if (todays) return todays;
+  return [...usable].sort((a, b) => (last[a.id] || "").localeCompare(last[b.id] || ""))[0];
+}
+
+/** Génère `count` nouvelles questions à partir des cours et livres d'un thème (un ou deux lots). */
+async function generateForTheme(themeId, count, signal, onStatus) {
+  const docs = S.sources.filter((x) => x.themeId === themeId && x.kind !== "quiz");
+  if (!docs.length || !SAMPLE) return 0;
+  const parts = [];
+  for (const d of docs) (await chunksOf(d.id)).forEach((c) => parts.push({ sourceId: d.id, name: d.name, text: c.text, n: c.n }));
+  if (!parts.length) return 0;
+  // On commence par les passages qui ont donné le moins de questions.
+  const used = (pt) => S.questions.filter((q) => q.sourceId === pt.sourceId && q.ref?.page && pt.text.includes(`[[Page ${q.ref.page}]]`)).length;
+  // Alterne entre les documents du thème (cours, livre…) pour que chacun ait sa part.
+  const byDoc = docs.map((d) => shuffle(parts.filter((pt) => pt.sourceId === d.id)).sort((a, b) => used(a) - used(b))).filter((l) => l.length);
+  const order = [];
+  for (let i = 0; order.length < parts.length; i++) for (const l of byDoc) if (l[i]) order.push(l[i]);
+  const perCall = byDoc.length > 1 ? Math.ceil(count / Math.min(byDoc.length, 3)) : count;
+  let made = 0, round = 0;
+  while (made < count && round < Math.max(3, byDoc.length + 1) && !signal.aborted) {
+    const part = order[round % order.length];
+    const angle = ANGLES[Math.floor(Math.random() * ANGLES.length)];
+    round++;
+    onStatus?.(`Lecture de « ${part.name} »${part.n !== undefined ? `, partie ${part.n + 1}` : ""}…`, made / count);
+    const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
+    const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, Math.min(20, perCall, count - made), "", existing, S.prog.genLang || "same", quizExamples(themeId), true), { signal, cache: false });
+    const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4).map((q) => ({ ...q, ref: checkRef(q, part.text) }));
+    made += await addQuestions(list, part.sourceId, "ia");
+  }
+  return made;
+}
+
+async function reviseTheme(themeId) {
+  const th = themeById(themeId);
+  if (!th) return;
+  const inTheme = S.questions.filter((q) => themeOfQ(q) === themeId);
+  const fresh = inTheme.filter((q) => statOf(q.id)[0] === 0 && q.origin !== "quiz");
+  const hasDocs = S.sources.some((x) => x.themeId === themeId && x.kind !== "quiz");
+  if (fresh.length < 20 && hasDocs && SAMPLE) {
+    const dlg = $("#prep"), ctl = new AbortController();
+    $("#prep-title").textContent = `Claude prépare de nouvelles questions sur « ${th.name} »`;
+    $("#prep-text").textContent = "À partir de ton livre et de ton cours, en s'inspirant de tes quiz. Environ une minute.";
+    $("#prep-bar").style.width = "10%";
+    $("#prep-skip").disabled = !inTheme.length;
+    $("#prep-skip").onclick = () => ctl.abort();
+    dlg.oncancel = (e) => { e.preventDefault(); if (inTheme.length) ctl.abort(); };
+    dlg.showModal();
+    try {
+      const made = await generateForTheme(themeId, 20, ctl.signal, (msg, ratio) => { $("#prep-text").textContent = msg; $("#prep-bar").style.width = `${Math.max(10, ratio * 100)}%`; });
+      if (made) toast(`${made} nouvelles questions créées pour « ${th.name} ».`);
+    } catch (e) {
+      if (e?.code !== "cancelled") toast(SAMPLE_ERRORS[e?.code] || "Création interrompue : on révise avec les questions déjà prêtes.", true);
+    }
+    dlg.close();
+  }
+  if (!S.questions.some((q) => themeOfQ(q) === themeId)) return toast(`Pas encore de question pour « ${th.name} » : range ses documents dans ce thème (onglet « Thèmes »).`, true);
+  startQuiz("practice", 20, [], 180, [themeId]);
+}
 function topicTable() {
   const m = {};
   for (const q of S.questions) {
@@ -1914,8 +2005,8 @@ function renderSources() {
   const sorted = [...S.sources].sort((a, b) => order.indexOf(a.themeId || "") - order.indexOf(b.themeId || ""));
   list.innerHTML = sorted.map((s) => {
     const n = S.questions.filter((q) => q.sourceId === s.id).length;
-    return `<div><span class="grow"><strong>${esc(s.name)}</strong><small>${s.kind === "quiz" ? "Quiz" : "Cours"} · ${fr(Math.round(s.chars / 1000))} k caractères · ${fr(n)} questions</small></span>
-      <select class="small" data-setkind="${s.id}" aria-label="Type de ${esc(s.name)}" style="width:auto"><option value="course" ${s.kind !== "quiz" ? "selected" : ""}>Cours ou livre</option><option value="quiz" ${s.kind === "quiz" ? "selected" : ""}>Quiz</option></select>
+    return `<div><span class="grow"><strong>${esc(s.name)}</strong><small>${KIND_LABEL[s.kind] || "Cours"} · ${fr(Math.round(s.chars / 1000))} k caractères · ${fr(n)} questions</small></span>
+      <select class="small" data-setkind="${s.id}" aria-label="Type de ${esc(s.name)}" style="width:auto"><option value="course" ${s.kind === "course" || !s.kind ? "selected" : ""}>Cours</option><option value="book" ${s.kind === "book" ? "selected" : ""}>Livre</option><option value="quiz" ${s.kind === "quiz" ? "selected" : ""}>Quiz</option></select>
       <select class="small" data-settheme="${s.id}" aria-label="Thème de ${esc(s.name)}" style="width:auto;max-width:220px">${themeOptions(s.themeId || "")}</select>
       ${s.kind === "quiz" ? `<button type="button" class="small" data-reextract="${s.id}">Relire avec Claude</button>` : ""}
       ${n ? `<button type="button" class="small" data-delqs="${s.id}">Supprimer ses ${fr(n)} questions</button>` : ""}
@@ -1939,7 +2030,7 @@ $("#theme-form").addEventListener("submit", (e) => {
 $("#themes-list").addEventListener("click", async (e) => {
   const b = e.target.closest("button");
   if (!b) return;
-  if (b.dataset.themeTrain) return startQuiz("practice", 20, [], 180, [b.dataset.themeTrain]);
+  if (b.dataset.themeTrain) return reviseTheme(b.dataset.themeTrain);
   if (b.dataset.themeRen) {
     const t = themeById(b.dataset.themeRen);
     const card = b.closest(".theme-card");
@@ -2064,6 +2155,7 @@ $("#gen-form").addEventListener("submit", async (e) => {
   const tier = $("#gen-tier").value;
   const lang = $("#gen-lang").value;
   const essential = $("#gen-depth").value !== "all";
+  S.prog.genLang = lang; saveProgress();
   const focus = $("#gen-focus").value.trim();
   const log = $("#gen-log");
   log.innerHTML = "";
@@ -2144,6 +2236,23 @@ function pickStratified(pool, count) {
   while (picked.length < count && rest.length) picked.push(rest.pop());
   return shuffle(picked.slice(0, count));
 }
+// Répartit une série entre questions de quiz, de livre et de cours (au moins un quart de chaque
+// catégorie disponible), puis équilibre les notions et privilégie les questions jamais vues.
+function pickMixed(pool, count) {
+  if (pool.length <= count) return shuffle(pool);
+  const cat = (q) => (q.origin === "quiz" ? "quiz" : srcOf(q)?.kind === "book" ? "book" : "course");
+  const groups = new Map();
+  for (const q of pool) { const c = cat(q); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(q); }
+  const n = groups.size;
+  const picked = [];
+  for (const list of groups.values()) {
+    const share = Math.max(Math.ceil(count / (n * 2)), Math.round((list.length / pool.length) * count));
+    picked.push(...pickStratified(list, Math.min(list.length, share)));
+  }
+  const used = new Set(picked.map((q) => q.id));
+  const rest = pickStratified(pool.filter((q) => !used.has(q.id)), Math.max(0, count - picked.length));
+  return shuffle([...picked, ...rest]).slice(0, count);
+}
 function buildSession(mode, count, topics = [], durationMin = 180, themes = []) {
   let pool = S.questions;
   if (themes.length) pool = pool.filter((q) => themes.includes(themeOfQ(q)));
@@ -2155,7 +2264,7 @@ function buildSession(mode, count, topics = [], durationMin = 180, themes = []) 
   if (!pool.length) throw new Error("Ta banque n'a pas encore de questions. Dépose tes documents puis crée des questions.");
   const chosen = mode === "review"
     ? shuffle([...pool].sort((a, b) => statOf(b.id)[1] / Math.max(1, statOf(b.id)[0]) - statOf(a.id)[1] / Math.max(1, statOf(a.id)[0])).slice(0, count))
-    : pickStratified(pool, count);
+    : pickMixed(pool, count);
   return {
     id: "a" + rid(), mode, startedAt: Date.now(),
     durationSec: mode === "exam" ? Math.round(durationMin * 60) : null,
@@ -2219,7 +2328,7 @@ function renderQuestion() {
   } else {
     const v = shown(q);
     $("#qcard").className = "qcard " + topicClass(q.topic);
-    $("#q-meta").innerHTML = `${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${q.origin === "quiz" ? '<span class="pill amber">quiz de l\'école</span>' : ""}${v.fr ? '<span class="pill c-violet">traduit en français</span>' : ""}`;
+    $("#q-meta").innerHTML = `${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${originPill(q)}${v.fr ? '<span class="pill c-violet">traduit en français</span>' : ""}`;
     $("#q-text").textContent = v.question;
     paintLangSwitches();
     if (S.prog.showFr && !q.fr) {
@@ -2347,7 +2456,7 @@ function renderResult(a, keepScroll = false) {
     <div class="row between"><h2>Correction</h2><div class="row"><span class="lang-switch" data-langswitch></span><label class="flag" for="only-wrong"><input type="checkbox" id="only-wrong" ${$("#only-wrong")?.checked === false ? "" : "checked"}> Seulement les erreurs</label></div></div>
     <div class="stack" id="corrs">${details.map((d, i) => `
       <div class="panel corr ${d.ok ? "ok" : "wrong"}">
-        <div class="qhead"><strong>Q${i + 1}</strong>${topicPill(d.q.topic)}${flags.has(d.q.id) ? '<span class="pill amber">à revoir</span>' : ""}<span class="pill ${d.ok ? "good" : "bad"} push">${d.ok ? "Juste" : d.it.a === null ? "Sans réponse" : "Faux"}</span></div>
+        <div class="qhead"><strong>Q${i + 1}</strong>${originPill(d.q)}${topicPill(d.q.topic)}${flags.has(d.q.id) ? '<span class="pill amber">à revoir</span>' : ""}<span class="pill ${d.ok ? "good" : "bad"} push">${d.ok ? "Juste" : d.it.a === null ? "Sans réponse" : "Faux"}</span></div>
         <p><strong>${esc(shown(d.q).question)}</strong>${trLink(d.q)}</p>
         <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(shown(d.q).choices[orig])}</span></li>`).join("")}</ul>
         ${shown(d.q).explanation ? `<p class="expl">${esc(shown(d.q).explanation)}</p>` : ""}
@@ -2398,7 +2507,7 @@ function renderBank(reset) {
   $("#bank-list").insertAdjacentHTML("beforeend", page.map((q) => {
     const s = statOf(q.id);
     return `<div class="panel" data-q="${q.id}">
-      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span><span class="pill ${q.origin === "quiz" ? "amber" : "plain"}">${q.origin === "quiz" ? "quiz de l'école" : "créée par Claude"}</span>${q.disputed ? '<span class="pill bad">réponse discutable</span>' : q.guessed ? '<span class="pill amber">réponse pas encore vérifiée</span>' : ""}${q.altered ? '<span class="pill bad">texte différent du quiz ?</span>' : ""}
+      <div class="qhead">${themePill(themeOfQ(q))}${topicPill(q.topic)}<span class="pill plain">${esc(q.difficulty)}</span>${originPill(q)}${q.disputed ? '<span class="pill bad">réponse discutable</span>' : q.guessed ? '<span class="pill amber">réponse pas encore vérifiée</span>' : ""}${q.altered ? '<span class="pill bad">texte différent du quiz ?</span>' : ""}
         ${s[0] ? `<small>${s[0]} fois vue, ${s[1]} erreur${s[1] > 1 ? "s" : ""} en cours</small>` : ""}<button type="button" class="small push" data-delq="${q.id}">Supprimer</button></div>
       <p><strong>${esc(shown(q).question)}</strong>${trLink(q)}</p>
       <ul class="opts">${shown(q).choices.map((c, j) => `<li class="${j === q.answer ? "right" : ""}"><b>${LETTERS[j]}</b><span>${esc(c)}</span></li>`).join("")}</ul>
