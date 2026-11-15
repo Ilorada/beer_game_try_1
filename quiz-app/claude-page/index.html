@@ -501,6 +501,12 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
             <option value="fr">Français</option>
           </select>
         </label>
+        <label class="field" for="gen-depth">Contenu visé
+          <select id="gen-depth">
+            <option value="essential" selected>L'essentiel pour l'examen (recommandé)</option>
+            <option value="all">Tout, y compris les études de cas</option>
+          </select>
+        </label>
         <label class="field" for="gen-tier">Qualité
           <select id="gen-tier">
             <option value="default" selected>Normale (recommandée)</option>
@@ -1053,6 +1059,13 @@ const SCOPE_RULE = [
   "- JAMAIS de question sur le cours ou le document lui-même : son plan, ses objectifs, « ce que l'on va étudier », le professeur, l'organisation des séances, l'évaluation, la bibliographie, les auteurs, le sommaire ou la mise en page.",
   "- Si le passage n'est qu'un sommaire, une introduction ou des consignes, interroge sur les notions de supply chain qu'il cite, ou renvoie moins de questions.",
 ].join("\n");
+// « L'essentiel pour l'examen » : les notions que le chapitre enseigne, pas les anecdotes des études de cas.
+const ESSENTIAL_RULE = [
+  "- Concentre-toi sur L'ESSENTIEL pour l'examen : les notions, définitions, modèles, méthodes, indicateurs et formules que le chapitre enseigne (ceux que l'on retrouve d'habitude dans « Summary », « Key terms », « Learning objectives » ou « Review questions »).",
+  "- Pas de question sur les détails d'une étude de cas (« case study ») ou d'un exemple : nom de l'entreprise, chiffres, dates, personnes ou faits propres à l'histoire racontée. Une étude de cas peut inspirer une question d'application seulement si elle teste une notion générale et se comprend sans avoir lu le cas.",
+  "- Les exercices et problèmes du livre servent de modèles pour des questions de calcul ou d'application : reprends la méthode avec d'autres chiffres.",
+  "- Si le passage n'est presque qu'une étude de cas ou des exercices, renvoie moins de questions plutôt que des questions de détail.",
+].join("\n");
 // Questions des quiz de l'école, données comme modèles de style (même thème de cours en priorité).
 function quizExamples(themeId, n = 12) {
   const all = S.questions.filter((q) => q.origin === "quiz");
@@ -1063,7 +1076,7 @@ function quizExamples(themeId, n = 12) {
   return "Voici des questions des quiz d'entraînement donnés par l'école. Inspire-toi de près de leur style, de leur niveau de difficulté, de leur longueur et du genre de notions qu'elles testent : l'examen leur ressemblera. Ne les recopie pas.\n" +
     pick.map((q, i) => `${i + 1}. ${q.question}\n${q.choices.map((c, j) => `   ${LETTERS[j]}) ${c}`).join("\n")}\n   Réponse : ${LETTERS[q.answer]}`).join("\n");
 }
-function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang = "same", examples = "") {
+function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang = "same", examples = "", essential = true) {
   return [
     "Tu es un enseignant expert en supply chain et en logistique. Tu prépares un étudiant à un examen de 80 QCM en 3 heures.",
     `Rédige ${count} nouveaux QCM à partir du passage de cours ci-dessous.`,
@@ -1080,6 +1093,7 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
     "- reste fidèle au passage ; tu peux compléter avec des connaissances classiques de supply chain cohérentes avec lui ;",
     REF_RULE,
     SCOPE_RULE,
+    essential ? ESSENTIAL_RULE : "",
     examples,
     topicsHint(),
     existing.length ? "Questions déjà posées sur ce document, à ne pas répéter ni reformuler :\n" + existing.map((s) => "- " + s).join("\n") : "",
@@ -2049,6 +2063,7 @@ $("#gen-form").addEventListener("submit", async (e) => {
   const target = Math.max(1, Math.min(3000, Number($("#gen-count").value) || 100));
   const tier = $("#gen-tier").value;
   const lang = $("#gen-lang").value;
+  const essential = $("#gen-depth").value !== "all";
   const focus = $("#gen-focus").value.trim();
   const log = $("#gen-log");
   log.innerHTML = "";
@@ -2081,7 +2096,7 @@ $("#gen-form").addEventListener("submit", async (e) => {
       const examples = quizExamples(S.sources.find((x) => x.id === part.sourceId)?.themeId);
       setStatus(done, `Lot ${round} : ${part.name}, partie ${part.n + 1} (${angle.split(" (")[0]})…`);
       try {
-        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing, lang, examples), { signal: genCtl.signal, modelTier: tier, cache: false });
+        const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, want, focus, existing, lang, examples, essential), { signal: genCtl.signal, modelTier: tier, cache: false });
         const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4).map((q) => ({ ...q, ref: checkRef(q, part.text) }));
         const added = await addQuestions(list, part.sourceId, "ia");
         done += added;
