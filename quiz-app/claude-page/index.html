@@ -302,11 +302,11 @@ button.action:hover { transform: translateY(-2px); border-color: var(--c); }
 .action .a-ico svg { width: 24px; height: 24px; }
 .action .a-go { margin-top: auto; font-weight: 800; color: var(--c); }
 .theme-picks { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.theme-pick { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); width: 100%; }
-.theme-pick:hover { border-color: var(--c); background: var(--cs); }
+.theme-pick { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); width: 100%; }
+.theme-pick:hover { border-color: var(--c); }
 .theme-pick strong { color: var(--c); }
-.theme-pick small { grid-column: 1; }
-.theme-pick .go { grid-row: 1 / span 2; grid-column: 2; font-weight: 800; color: var(--c); }
+.tp-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.tp-btns .tp-main { background: var(--c); border-color: var(--c); color: #fff; }
 .theme-pick.today { border-color: var(--sun); background: var(--sun-soft); }
 details.panel > summary { cursor: pointer; list-style-position: outside; margin-left: 18px; }
 #bg-pill { position: fixed; left: 16px; bottom: 16px; z-index: 35; background: var(--surface); box-shadow: var(--shadow); border-radius: 99px; padding: 8px 10px 8px 16px; display: flex; gap: 10px; align-items: center; font-size: 14px; font-weight: 700; color: var(--teal-deep); border: 2px solid var(--teal-soft); }
@@ -464,7 +464,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <span class="a-go">Commencer l'examen →</span>
       </button>
     </div>
-    <div class="row"><button type="button" class="link" id="errors-btn">Revoir seulement mes erreurs</button></div>
+    <div class="row"><button type="button" class="link" id="errors-btn">Revoir seulement mes erreurs</button><button type="button" class="link" id="allquiz-btn">Refaire tous mes quiz de l'école</button></div>
     <div id="resume-box" class="notice hidden">
       <strong>Une série est en cours.</strong>
       <div class="row"><button type="button" class="primary" id="resume-btn">Reprendre</button><button type="button" id="drop-cur-btn">L'abandonner</button></div>
@@ -1790,10 +1790,14 @@ function renderHome() {
         for (const q of qs) { const st = statOf(q.id); seen += st[0]; wrong += st[1]; }
         const pct = seen ? Math.round(Math.max(0, 1 - wrong / seen) * 100) : null;
         const ok = qs.length || S.sources.some((x) => x.themeId === th.id);
-        return `<button type="button" class="theme-pick ${themeClass(th.id)} ${tod && tod.id === th.id ? "today" : ""}" data-home-theme="${th.id}" ${ok ? "" : "disabled"}>
+        const nq = qs.filter((q) => q.origin === "quiz").length;
+        return `<div class="theme-pick ${themeClass(th.id)} ${tod && tod.id === th.id ? "today" : ""}">
           <strong>${esc(th.name)}${tod && tod.id === th.id ? ' <span class="pill amber">thème du jour</span>' : ""}</strong>
           <small>${lastRevTxt(th.id)}${pct === null ? "" : ` · ${pct} % de réussite`}${ok ? "" : " · aucun document"}</small>
-          <span class="go">Réviser →</span></button>`;
+          <div class="tp-btns">
+            <button type="button" class="small tp-main" data-home-theme="${th.id}" ${ok ? "" : "disabled"}>Réviser →</button>
+            ${nq ? `<button type="button" class="small" data-quiz-theme="${th.id}">Refaire les quiz de l'école (${nq})</button>` : ""}
+          </div></div>`;
       }).join("")
     : `<p class="hint">Crée tes thèmes dans « Mes cours » et ranges-y tes documents.</p>`;
   const t = topicTable().filter((x) => x.seen > 0).sort((a, b) => a.rate - b.rate);
@@ -1804,10 +1808,34 @@ function renderHome() {
 $("#exam-date").addEventListener("change", (e) => { S.prog.examDate = e.target.value; saveProgress(); renderHome(); });
 $("#daily-goal").addEventListener("change", (e) => { S.prog.goal = Math.max(5, Math.min(500, Number(e.target.value) || 40)); saveProgress(); renderHome(); });
 function lastRevTxt(id) { const d = (S.prog.themeLast || {})[id]; if (!d) return "pas encore révisé"; if (d === today()) return "révisé aujourd'hui"; const [, m, dd] = d.split("-"); return `révisé le ${dd}/${m}`; }
-$("#theme-picks").addEventListener("click", (e) => { const b = e.target.closest("[data-home-theme]"); if (b) reviseTheme(b.dataset.homeTheme); });
+$("#theme-picks").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-home-theme]");
+  if (b) return reviseTheme(b.dataset.homeTheme);
+  const qz = e.target.closest("[data-quiz-theme]");
+  if (qz) redoSchoolQuizzes({ themeId: qz.dataset.quizTheme });
+});
+
+/** Refaire les quiz de l'école : seulement leurs questions, dans l'ordre d'origine. */
+function redoSchoolQuizzes({ themeId = "", sourceId = "" }) {
+  const order = new Map(S.sources.map((x, i) => [x.id, [x.createdAt || 0, i]]));
+  const qs = S.questions
+    .map((q, i) => ({ q, i }))
+    .filter(({ q }) => q.origin === "quiz" && (!themeId || themeOfQ(q) === themeId) && (!sourceId || q.sourceId === sourceId))
+    .sort((a, b) => { const A = order.get(a.q.sourceId) || [0, 0], B = order.get(b.q.sourceId) || [0, 0]; return A[0] - B[0] || A[1] - B[1] || a.i - b.i; })
+    .map(({ q }) => q);
+  if (!qs.length) return toast("Aucune question de quiz ici pour l'instant.", true);
+  const title = sourceId ? `Quiz « ${srcOf(qs[0])?.name || ""} »` : `Quiz de l'école · ${themeById(themeId)?.name || "tous les thèmes"}`;
+  const session = { id: "a" + rid(), mode: "practice", title, startedAt: Date.now(), durationSec: null, items: qs.map((q) => ({ q: q.id, o: q.choices.map((_, i) => i) })) };
+  quiz = { session, idx: 0, answers: {}, flags: {}, feedback: {}, finished: false };
+  if (S.prog.showFr) { S.prog.showFr = false; saveProgress(); }
+  S.cur = quiz;
+  saveCur();
+  openQuiz();
+}
 $("#all-btn").addEventListener("click", () => reviseAll());
 $("#exam-btn").addEventListener("click", () => startFullExam());
 $("#errors-btn").addEventListener("click", () => startQuiz("review", 20, []));
+$("#allquiz-btn").addEventListener("click", () => redoSchoolQuizzes({}));
 
 /** Thème du jour : celui qui n'a jamais été révisé, sinon celui révisé il y a le plus longtemps. */
 function themeOfTheDay() {
@@ -2257,6 +2285,7 @@ function renderSources() {
     return `<div><span class="grow"><strong>${esc(s.name)}</strong><small>${KIND_LABEL[s.kind] || "Cours"} · ${fr(Math.round(s.chars / 1000))} k caractères · ${fr(n)} questions</small></span>
       <select class="small" data-setkind="${s.id}" aria-label="Type de ${esc(s.name)}" style="width:auto"><option value="course" ${s.kind === "course" || !s.kind ? "selected" : ""}>Cours</option><option value="book" ${s.kind === "book" ? "selected" : ""}>Livre</option><option value="quiz" ${s.kind === "quiz" ? "selected" : ""}>Quiz</option></select>
       <select class="small" data-settheme="${s.id}" aria-label="Thème de ${esc(s.name)}" style="width:auto;max-width:220px">${themeOptions(s.themeId || "")}</select>
+      ${s.kind === "quiz" && n ? `<button type="button" class="small primary" data-redoquiz="${s.id}">Refaire ce quiz</button>` : ""}
       ${s.kind === "quiz" ? `<button type="button" class="small" data-reextract="${s.id}">Relire avec Claude</button>` : ""}
       ${n ? `<button type="button" class="small" data-delqs="${s.id}">Supprimer ses ${fr(n)} questions</button>` : ""}
       <button type="button" class="small" data-delsrc="${s.id}">Supprimer le document</button></div>`;
@@ -2338,6 +2367,7 @@ $("#sources-list").addEventListener("change", async (e) => {
 });
 $("#sources-list").addEventListener("click", async (e) => {
   const del = e.target.dataset.delsrc, re = e.target.dataset.reextract, dq = e.target.dataset.delqs;
+  if (e.target.dataset.redoquiz) return redoSchoolQuizzes({ sourceId: e.target.dataset.redoquiz });
   if (dq) {
     const src = S.sources.find((x) => x.id === dq);
     const qs = S.questions.filter((q) => q.sourceId === dq);
@@ -2584,7 +2614,7 @@ function renderQuestion() {
   const q = itemQ(it);
   const exam = session.mode === "exam";
   const answered = Object.keys(quiz.answers).length;
-  $("#quiz-label").textContent = `${MODE_LABEL[session.mode]} · question ${idx + 1} sur ${session.items.length} · ${answered} répondue${answered > 1 ? "s" : ""}`;
+  $("#quiz-label").textContent = `${session.title || MODE_LABEL[session.mode]} · question ${idx + 1} sur ${session.items.length} · ${answered} répondue${answered > 1 ? "s" : ""}`;
   $("#quiz-bar").style.width = (answered / session.items.length) * 100 + "%";
   if (!q) {
     $("#q-meta").innerHTML = ""; $("#q-text").textContent = "Cette question a été supprimée de ta banque."; $("#q-choices").innerHTML = ""; $("#q-feedback").className = "feedback hidden";
