@@ -657,7 +657,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       </select>
     </div>
     <div class="row between"><p class="hint" id="bank-count"></p>
-      <div class="row"><span class="lang-switch" data-langswitch></span><button type="button" class="small" id="bank-verify"><svg><use href="#i-check"/></svg>Vérifier les réponses non vérifiées</button><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
+      <div class="row"><span class="lang-switch" data-langswitch></span><button type="button" class="small" id="bank-fixlang"><svg><use href="#i-lang"/></svg>Remettre en anglais</button><button type="button" class="small" id="bank-verify"><svg><use href="#i-check"/></svg>Vérifier les réponses non vérifiées</button><button type="button" class="small" id="bank-clean"><svg><use href="#i-spark"/></svg>Trouver les questions hors sujet</button><button type="button" class="small" id="bank-delall">Supprimer les questions affichées</button></div></div>
     <div id="clean-panel" class="panel hidden"></div>
     <details class="panel">
       <summary><strong>Options avancées</strong> (créer des questions moi-même, choisir des notions précises, régler l'examen)</summary>
@@ -1119,10 +1119,20 @@ function topicsHint() {
   return t.length ? `Thèmes déjà utilisés (réutilise-les quand ils conviennent, sinon crée un thème court) : ${t.join(" ; ")}.` : "Donne à chaque question un thème court de supply chain, par exemple « Gestion des stocks » ou « Prévision de la demande ».";
 }
 
+// Langue d'un texte : on compte des petits mots très fréquents en anglais et en français.
+const EN_WORDS = new Set("the of and to is in that for with which what are as by this be or from an on it its can".split(" "));
+const FR_WORDS = new Set("le la les des est une du et que pour dans qui sur au aux par pas ce cette sont ou en se il elle".split(" "));
+function langOf(text) {
+  let en = 0, fr = 0;
+  for (const w of String(text).toLowerCase().replace(/\[\[page \d+\]\]/g, " ").split(/[^a-zà-ÿ']+/).slice(0, 4000)) {
+    if (EN_WORDS.has(w)) en++;
+    if (FR_WORDS.has(w)) fr++;
+  }
+  return fr > en ? "fr" : "en";
+}
 const LANG_RULE = {
-  same: "Rédige les questions, les propositions et les explications dans la même langue que le passage (anglais si le passage est en anglais).",
-  en: "Write the questions, the choices and the explanations in English, like the real exam.",
-  fr: "Rédige les questions, les propositions et les explications en français.",
+  en: "LANGUE — TRÈS IMPORTANT : rédige l'énoncé, les 4 propositions et l'explication ENTIÈREMENT EN ANGLAIS, comme à l'examen, même si ces consignes sont en français. Seul le champ « topic » reste en français. (Write the question, the choices and the explanation in English.)",
+  fr: "LANGUE : rédige l'énoncé, les propositions et l'explication en français.",
 };
 const SCOPE_RULE = [
   "- UNIQUEMENT des questions de connaissances en supply chain et logistique : notions, méthodes, calculs, indicateurs, acteurs, cas pratiques.",
@@ -1150,7 +1160,7 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
   return [
     "Tu es un enseignant expert en supply chain et en logistique. Tu prépares un étudiant à un examen de 80 QCM en 3 heures.",
     `Rédige ${count} nouveaux QCM à partir du passage de cours ci-dessous.`,
-    LANG_RULE[lang] || LANG_RULE.same,
+    LANG_RULE[lang === "en" || lang === "fr" ? lang : langOf(chunk)],
     `Angle à privilégier pour ce lot : ${angle}.`,
     focus ? `Consigne de l'étudiant : ${focus}` : "",
     "Règles :",
@@ -1612,6 +1622,16 @@ async function verifyAnswers(qs, onStatus) {
   reindex();
   return { confirmed, changed, disputed };
 }
+$("#bank-fixlang").addEventListener("click", async (e) => {
+  if (!SAMPLE) return toast("Claude n'est pas disponible dans cette vue.", true);
+  e.target.disabled = true;
+  const wrong = await wrongLanguageQuestions();
+  if (!wrong.length) { e.target.disabled = false; return toast("Toutes tes questions sont déjà dans la langue de leur cours."); }
+  const n = await fixLanguage(wrong, (m) => ($("#bank-count").textContent = m));
+  e.target.disabled = false;
+  toast(`${n} questions remises en anglais. Le bouton « Français » garde leur version française.`);
+  renderBank(true);
+});
 $("#bank-verify").addEventListener("click", async (e) => {
   const qs = S.questions.filter((q) => q.guessed);
   if (!qs.length) return toast("Toutes tes réponses sont déjà vérifiées.");
@@ -1927,10 +1947,74 @@ async function startFullExam() {
 // un lot à la fois, tant que la page est ouverte. S'arrête pendant une préparation au premier plan.
 let bgRunning = false, bgPaused = false;
 const docTarget = (d) => Math.max(20, Math.min(60, (d.chunkCount || 1) * 8));
+const srcLang = new Map();
+async function sourceLang(sourceId) {
+  if (!srcLang.has(sourceId)) {
+    const parts = await chunksOf(sourceId).catch(() => []);
+    srcLang.set(sourceId, parts.length ? langOf(parts.slice(0, 3).map((c) => c.text).join(" ")) : null);
+  }
+  return srcLang.get(sourceId);
+}
+async function wrongLanguageQuestions() {
+  const out = [];
+  for (const q of S.questions) {
+    if (q.origin !== "ia" || q.langFixed || langOf(`${q.question} ${q.choices.join(" ")}`) !== "fr") continue;
+    if ((await sourceLang(q.sourceId)) === "en") out.push(q);
+  }
+  return out;
+}
+/** Traduit en anglais les questions écrites en français ; la version française est gardée pour le bouton « Français ». */
+async function fixLanguage(qs, onStatus) {
+  let fixed = 0;
+  for (let i = 0; i < qs.length; i += 8) {
+    const part = qs.slice(i, i + 8);
+    onStatus?.(`Remise en anglais de tes questions : ${Math.min(i + 8, qs.length)} sur ${qs.length}`);
+    let r;
+    try {
+      r = await SAMPLE.json([
+        "Traduis ces QCM de supply chain du français vers un anglais professionnel, naturel et précis, avec les termes techniques anglais habituels (safety stock, lead time, bullwhip effect…).",
+        "Garde exactement le même nombre de propositions, dans le même ordre, et le même sens. Traduis aussi l'explication.",
+        'Réponds uniquement avec un objet JSON : {"items":[{"n":0,"question":"…","choices":["…"],"explanation":"…"}]}',
+        "",
+        JSON.stringify(part.map((q, n) => ({ n, question: q.question, choices: q.choices, explanation: q.explanation || "" }))),
+      ].join("\n"), { modelTier: "quick", cache: false });
+    } catch (e) {
+      if (FATAL.has(e?.code)) break;
+      continue;
+    }
+    for (const it of Array.isArray(r?.items) ? r.items : []) {
+      const q = part[Number(it.n)];
+      if (!q || typeof it.question !== "string" || !Array.isArray(it.choices) || it.choices.length !== q.choices.length) continue;
+      for (const o of new Set([q, S.batches.get(q.batchId)?.questions.find((x) => x.id === q.id)])) {
+        if (!o) continue;
+        o.fr = { question: o.question, choices: [...o.choices], explanation: o.explanation || "" };
+        o.question = it.question; o.choices = it.choices.map(String); o.explanation = String(it.explanation || o.explanation);
+        o.langFixed = true;
+      }
+      fixed++;
+    }
+    for (const bid of new Set(part.map((q) => q.batchId))) {
+      const b = S.batches.get(bid);
+      if (b) await write(col("qbatches").doc(bid), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(({ batchId, sourceId, ...rest }) => rest) }).catch(() => {});
+    }
+  }
+  reindex();
+  return fixed;
+}
+let langChecked = false;
 function startBgFill() {
   if (bgRunning || bgPaused || !SAMPLE || !ROOT) return;
   bgRunning = true;
   (async () => {
+    if (!langChecked) {
+      langChecked = true;
+      const wrong = await wrongLanguageQuestions();
+      if (wrong.length) {
+        $("#bg-pill").classList.remove("hidden");
+        const n = await fixLanguage(wrong, (m) => ($("#bg-text").textContent = m));
+        if (n) { toast(`${n} questions remises en anglais (comme ton cours). Le bouton « Français » garde leur version française.`); if (quiz && $("#view-quiz").classList.contains("active")) renderQuestion(); }
+      }
+    }
     let fails = 0;
     while (!bgPaused && fails < 2) {
       if (fgBusy || genCtl) { await new Promise((r) => setTimeout(r, 3000)); continue; }
@@ -2453,6 +2537,7 @@ function buildSession(mode, count, topics = [], durationMin = 180, themes = []) 
 
 let quiz = null, timerH = null;
 function startQuiz(mode, count, topics, durationMin, themes = []) {
+  if (!langChecked) startBgFill();
   try {
     const session = buildSession(mode, count, topics, durationMin, themes);
     if (session.items.length < count) toast(`Ta banque ne contient que ${session.items.length} questions pour cette sélection.`);
