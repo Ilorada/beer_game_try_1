@@ -541,8 +541,7 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
         <label class="field" for="gen-count">Nombre de questions<input type="number" id="gen-count" value="100" min="10" max="3000" step="10"></label>
         <label class="field" for="gen-lang">Langue des questions
           <select id="gen-lang">
-            <option value="same" selected>Celle du document</option>
-            <option value="en">Anglais (comme l'examen)</option>
+            <option value="en" selected>Anglais (comme l'examen)</option>
             <option value="fr">Français</option>
           </select>
         </label>
@@ -1160,7 +1159,7 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
   return [
     "Tu es un enseignant expert en supply chain et en logistique. Tu prépares un étudiant à un examen de 80 QCM en 3 heures.",
     `Rédige ${count} nouveaux QCM à partir du passage de cours ci-dessous.`,
-    LANG_RULE[lang === "en" || lang === "fr" ? lang : langOf(chunk)],
+    LANG_RULE[lang === "fr" ? "fr" : "en"],
     `Angle à privilégier pour ce lot : ${angle}.`,
     focus ? `Consigne de l'étudiant : ${focus}` : "",
     "Règles :",
@@ -1626,7 +1625,7 @@ $("#bank-fixlang").addEventListener("click", async (e) => {
   if (!SAMPLE) return toast("Claude n'est pas disponible dans cette vue.", true);
   e.target.disabled = true;
   const wrong = await wrongLanguageQuestions();
-  if (!wrong.length) { e.target.disabled = false; return toast("Toutes tes questions sont déjà dans la langue de leur cours."); }
+  if (!wrong.length) { e.target.disabled = false; return toast("Toutes tes questions sont déjà en anglais."); }
   const n = await fixLanguage(wrong, (m) => ($("#bank-count").textContent = m));
   e.target.disabled = false;
   toast(`${n} questions remises en anglais. Le bouton « Français » garde leur version française.`);
@@ -1843,7 +1842,7 @@ async function generateForDocs(docs, count, signal, onStatus, themeId = "") {
     round++;
     onStatus?.(`${made} / ${count} questions prêtes · lecture de « ${part.name} »${part.n !== undefined ? `, partie ${part.n + 1}` : ""}…`, made / count);
     const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
-    const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, Math.min(20, perCall, count - made), "", existing, S.prog.genLang || "same", quizExamples(themeId || part.themeId), true), { signal, cache: false });
+    const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, Math.min(20, perCall, count - made), "", existing, "en", quizExamples(themeId || part.themeId), true), { signal, cache: false });
     const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4).map((q) => ({ ...q, ref: checkRef(q, part.text) }));
     made += await addQuestions(list, part.sourceId, "ia");
   }
@@ -1958,8 +1957,8 @@ async function sourceLang(sourceId) {
 async function wrongLanguageQuestions() {
   const out = [];
   for (const q of S.questions) {
-    if (q.origin !== "ia" || q.langFixed || langOf(`${q.question} ${q.choices.join(" ")}`) !== "fr") continue;
-    if ((await sourceLang(q.sourceId)) === "en") out.push(q);
+    if (q.langFixed || langOf(`${q.question} ${q.choices.join(" ")}`) !== "fr") continue;
+    out.push(q);
   }
   return out;
 }
@@ -2012,7 +2011,7 @@ function startBgFill() {
       if (wrong.length) {
         $("#bg-pill").classList.remove("hidden");
         const n = await fixLanguage(wrong, (m) => ($("#bg-text").textContent = m));
-        if (n) { toast(`${n} questions remises en anglais (comme ton cours). Le bouton « Français » garde leur version française.`); if (quiz && $("#view-quiz").classList.contains("active")) renderQuestion(); }
+        if (n) { toast(`${n} questions passées en anglais. Le bouton « Français » garde leur version française.`); if (quiz && $("#view-quiz").classList.contains("active")) renderQuestion(); }
       }
     }
     let fails = 0;
@@ -2542,6 +2541,7 @@ function startQuiz(mode, count, topics, durationMin, themes = []) {
     const session = buildSession(mode, count, topics, durationMin, themes);
     if (session.items.length < count) toast(`Ta banque ne contient que ${session.items.length} questions pour cette sélection.`);
     quiz = { session, idx: 0, answers: {}, flags: {}, feedback: {}, finished: false };
+    if (S.prog.showFr) { S.prog.showFr = false; saveProgress(); }
     S.cur = quiz;
     saveCur();
     openQuiz();
