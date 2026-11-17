@@ -291,6 +291,7 @@ button.chip { border-radius: 99px; padding: 5px 12px; font-size: 14px; backgroun
 .tq > div { display: flex; flex-direction: column; gap: 4px; }
 .tq .lang { font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 @media (max-width: 720px) { .tq { grid-template-columns: 1fr; } }
+.count-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; background: var(--surface); border-radius: 16px; padding: 10px 14px; box-shadow: var(--shadow); }
 .actions { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; }
 @media (max-width: 860px) { .actions { grid-template-columns: 1fr; } }
 .action { background: var(--surface); border: 0; border-radius: 22px; padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; border-top: 7px solid var(--c); font: inherit; color: var(--ink); }
@@ -433,17 +434,27 @@ dialog .row { justify-content: flex-end; margin-top: 16px; }
       <div><button type="button" class="primary" data-goto="sources"><svg><use href="#i-doc"/></svg>Ajouter mes cours</button></div>
     </div>
     <h2>Que veux-tu faire ?</h2>
+    <div class="count-row">
+      <strong>Nombre de questions :</strong>
+      <div class="seg" role="radiogroup" aria-label="Nombre de questions">
+        <label><input type="radio" name="rcount" value="20" checked> 20</label>
+        <label><input type="radio" name="rcount" value="40"> 40</label>
+        <label><input type="radio" name="rcount" value="80"> 80</label>
+        <label><input type="radio" name="rcount" value="custom"> Autre : <input type="number" id="rcount-custom" min="5" max="300" step="5" value="60" aria-label="Nombre de questions" style="width:76px;padding:4px 8px"></label>
+      </div>
+      <label class="flag" for="rtimed" style="color:var(--ink)"><input type="checkbox" id="rtimed"> Chronométré comme l'examen <small>(2 min 15 par question, correction à la fin)</small></label>
+    </div>
     <div class="actions">
       <div class="action c-teal">
         <span class="a-ico"><svg><use href="#i-target"/></svg></span>
         <h3>Réviser un thème</h3>
-        <p class="hint">20 questions qui mélangent ton quiz, ton cours et ton livre. Choisis le thème :</p>
+        <p class="hint"><span class="rc-n">20</span> questions qui mélangent ton quiz, ton cours et ton livre. Choisis le thème :</p>
         <div id="theme-picks" class="theme-picks"></div>
       </div>
       <button type="button" class="action c-orange" id="all-btn">
         <span class="a-ico"><svg><use href="#i-spark"/></svg></span>
         <h3>Tout réviser</h3>
-        <span class="hint">20 questions au hasard, tous les thèmes mélangés.</span>
+        <span class="hint"><span class="rc-n">20</span> questions au hasard, tous les thèmes mélangés.</span>
         <span class="a-go">C'est parti →</span>
       </button>
       <button type="button" class="action c-violet" id="exam-btn">
@@ -1806,11 +1817,11 @@ async function generateForDocs(docs, count, signal, onStatus, themeId = "") {
   for (let i = 0; order.length < parts.length; i++) for (const l of byDoc) if (l[i]) order.push(l[i]);
   const perCall = byDoc.length > 1 ? Math.ceil(count / Math.min(byDoc.length, 3)) : count;
   let made = 0, round = 0;
-  while (made < count && round < Math.max(3, byDoc.length + 1) && !signal.aborted) {
+  while (made < count && round < Math.ceil(count / 20) + byDoc.length + 2 && !signal.aborted) {
     const part = order[round % order.length];
     const angle = ANGLES[Math.floor(Math.random() * ANGLES.length)];
     round++;
-    onStatus?.(`Lecture de « ${part.name} »${part.n !== undefined ? `, partie ${part.n + 1}` : ""}…`, made / count);
+    onStatus?.(`${made} / ${count} questions prêtes · lecture de « ${part.name} »${part.n !== undefined ? `, partie ${part.n + 1}` : ""}…`, made / count);
     const existing = S.questions.filter((q) => q.sourceId === part.sourceId).slice(-120).map((q) => q.question.slice(0, 160));
     const data = await SAMPLE.json(generationPrompt(part.text, part.name, angle, Math.min(20, perCall, count - made), "", existing, S.prog.genLang || "same", quizExamples(themeId || part.themeId), true), { signal, cache: false });
     const list = (Array.isArray(data?.questions) ? data.questions : []).filter((q) => Array.isArray(q.choices) && q.choices.length === 4).map((q) => ({ ...q, ref: checkRef(q, part.text) }));
@@ -1846,18 +1857,51 @@ const docCount = (d) => S.questions.filter((q) => q.sourceId === d.id).length;
 const contentDocs = () => S.sources.filter((x) => x.kind !== "quiz");
 
 /** « Tout réviser » : complète avec des questions du document le moins exploité si besoin. */
+// Nombre de questions et chrono choisis sur l'accueil (gardés d'une visite à l'autre).
+function revCount() {
+  const v = document.querySelector('input[name="rcount"]:checked')?.value || "20";
+  return v === "custom" ? Math.max(5, Math.min(300, Number($("#rcount-custom").value) || 20)) : Number(v);
+}
+function paintCount() {
+  document.querySelectorAll(".rc-n").forEach((el) => (el.textContent = revCount()));
+}
+function saveCountPrefs() { S.prog.revCount = revCount(); S.prog.revTimed = $("#rtimed").checked; saveProgress(); paintCount(); }
+document.querySelectorAll('input[name="rcount"]').forEach((r) => r.addEventListener("change", saveCountPrefs));
+$("#rcount-custom").addEventListener("input", () => { document.querySelector('input[name="rcount"][value="custom"]').checked = true; saveCountPrefs(); });
+$("#rtimed").addEventListener("change", saveCountPrefs);
+function restoreCountPrefs() {
+  const n = Number(S.prog.revCount) || 20;
+  const radio = document.querySelector(`input[name="rcount"][value="${n}"]`);
+  if (radio) radio.checked = true;
+  else { document.querySelector('input[name="rcount"][value="custom"]').checked = true; $("#rcount-custom").value = n; }
+  $("#rtimed").checked = !!S.prog.revTimed;
+  paintCount();
+}
+/** Lance la série : entraînement (correction immédiate) ou chronométrée comme l'examen. */
+function startRevision(count, themes = []) {
+  if ($("#rtimed").checked) startQuiz("exam", count, [], Math.round((count * 135) / 60), themes);
+  else startQuiz("practice", count, [], 180, themes);
+}
+const prepText = (n) => `À partir de ton livre et de ton cours, en s'inspirant de tes quiz. Compte environ une minute pour 20 questions (ici ${n}).`;
+
 async function reviseAll() {
   startBgFill();
+  const count = revCount();
   const fresh = S.questions.filter((q) => statOf(q.id)[0] === 0 && q.origin !== "quiz");
   const docs = contentDocs();
-  if (fresh.length < 20 && docs.length && SAMPLE) {
-    await withPrep("Claude prépare de nouvelles questions", "Tirées de tes cours et de ton livre, sur tous les thèmes. Environ une minute.", S.questions.length > 0, async (signal, onStatus) => {
-      const pick = [...docs].sort((a, b) => docCount(a) - docCount(b)).slice(0, 2);
-      return generateForDocs(pick, 20, signal, onStatus);
+  const need = Math.min(80, count - fresh.length);
+  if (need > 0 && docs.length && SAMPLE) {
+    await withPrep("Claude prépare de nouvelles questions", prepText(need), S.questions.length > 0, async (signal, onStatus) => {
+      let made = 0;
+      for (let round = 0; made < need && round < 8 && !signal.aborted; round++) {
+        const d = [...docs].sort((a, b) => docCount(a) - docCount(b))[0];
+        made += await generateForDocs([d], Math.min(20, need - made), signal, (m) => onStatus(m, made / need));
+      }
+      return made;
     });
   }
   if (!S.questions.length) return toast("Ajoute d'abord tes cours et tes quiz dans « Mes cours ».", true);
-  startQuiz("practice", 20, []);
+  startRevision(count);
 }
 
 /** Examen blanc : 80 questions, 3 heures ; complète la banque si elle en a moins de 80. */
@@ -1919,11 +1963,15 @@ async function reviseTheme(themeId) {
   const inTheme = S.questions.filter((q) => themeOfQ(q) === themeId);
   const fresh = inTheme.filter((q) => statOf(q.id)[0] === 0 && q.origin !== "quiz");
   const hasDocs = S.sources.some((x) => x.themeId === themeId && x.kind !== "quiz");
-  if (fresh.length < 20 && hasDocs && SAMPLE) {
-    await withPrep(`Claude prépare de nouvelles questions sur « ${th.name} »`, "À partir de ton livre et de ton cours, en s'inspirant de tes quiz. Environ une minute.", inTheme.length > 0, (signal, onStatus) => generateForTheme(themeId, 20, signal, onStatus));
+  const count = revCount();
+  // Il faut assez de questions pas encore vues (en plus de celles des quiz) pour remplir la série.
+  const quizIn = inTheme.filter((q) => q.origin === "quiz").length;
+  const need = Math.min(100, count - fresh.length - Math.min(quizIn, Math.round(count / 3)));
+  if (need > 0 && hasDocs && SAMPLE) {
+    await withPrep(`Claude prépare ${need} nouvelles questions sur « ${th.name} »`, prepText(need), inTheme.length > 0, (signal, onStatus) => generateForTheme(themeId, need, signal, onStatus));
   }
   if (!S.questions.some((q) => themeOfQ(q) === themeId)) return toast(`Pas encore de question pour « ${th.name} » : range ses documents dans ce thème (onglet « Mes cours »).`, true);
-  startQuiz("practice", 20, [], 180, [themeId]);
+  startRevision(count, [themeId]);
 }
 function topicTable() {
   const m = {};
@@ -2743,6 +2791,7 @@ $("#history").addEventListener("click", (e) => { const id = e.target.dataset.ope
     ROOT = db.doc(`data/users/${uid}/app`);
     await loadAll();
     setNoel(S.prog.noel !== false);
+    restoreCountPrefs();
     msg.remove();
     if (!SAMPLE) {
       const n = document.createElement("div");
