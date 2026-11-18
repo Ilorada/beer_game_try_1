@@ -817,7 +817,12 @@ async function addQuestions(list, sourceId, origin) {
   for (const q of list) {
     const key = stemKey(q.question || "");
     const choices = (q.choices || []).map((c) => String(c).trim()).filter(Boolean);
-    const answer = Number(q.answer);
+    let answer = Number(q.answer);
+    // Si la lettre ne correspond pas au texte de la bonne réponse donné par Claude, on se fie au texte.
+    if (q.answerText) {
+      const k = choices.findIndex((c) => loose(c) === loose(q.answerText));
+      if (k >= 0) answer = k;
+    }
     if (!key || seen.has(key) || choices.length < 2 || !(answer >= 0 && answer < choices.length)) continue;
     if (new Set(choices.map(stemKey)).size !== choices.length) continue;
     seen.add(key);
@@ -1095,7 +1100,7 @@ const ANGLES = [
   "application à un secteur concret (grande distribution, industrie, e-commerce, santé, agroalimentaire)",
 ];
 
-const JSON_SHAPE = `{"questions":[{"question":"…","choices":["…","…","…","…"],"answer":0,"explanation":"…","topic":"…","difficulty":"facile|moyen|difficile","page":12,"quote":"…"}]}`;
+const JSON_SHAPE = `{"questions":[{"question":"…","choices":["…","…","…","…"],"answer":0,"answerText":"…","explanation":"…","topic":"…","difficulty":"facile|moyen|difficile","page":12,"quote":"…"}]}`;
 const REF_RULE = "- Le passage contient des repères « [[Page N]] ». Pour chaque question, mets dans « page » le numéro N du repère qui précède l'information utilisée (null s'il n'y a aucun repère), et dans « quote » une courte citation EXACTE du passage (10 à 25 mots, copiée mot pour mot, sans le repère) qui justifie la bonne réponse.";
 /** Garde la page et la citation seulement si elles existent vraiment dans le passage. */
 function checkRef(q, chunk) {
@@ -1167,7 +1172,8 @@ function generationPrompt(chunk, sourceName, angle, count, focus, existing, lang
     "- des propositions fausses plausibles et de longueur comparable, jamais « toutes les réponses » ni « aucune » ;",
     "- chaque question se comprend seule, sans « selon le texte » ;",
     "- pour un calcul, donne toutes les données et vérifie ton résultat ;",
-    "- l'explication (2 à 4 phrases) dit pourquoi la bonne réponse est juste et pourquoi les autres sont fausses ;",
+    "- l'explication (2 à 4 phrases) dit pourquoi la bonne réponse est juste et pourquoi les autres sont fausses ; elle cite la bonne réponse par son contenu, jamais par sa lettre ou sa position (« the first choice », « option C »…), car les propositions seront mélangées ;",
+    "- « answerText » est la copie exacte de la bonne proposition. Avant de répondre, vérifie pour chaque question que « answer », « answerText » et l'explication désignent bien la MÊME proposition (pour un calcul, refais-le) ;",
     "- environ 30 % de questions faciles, 50 % moyennes, 20 % difficiles ;",
     "- reste fidèle au passage ; tu peux compléter avec des connaissances classiques de supply chain cohérentes avec lui ;",
     REF_RULE,
@@ -1571,6 +1577,39 @@ document.addEventListener("click", (e) => {
     const slot = open.closest("[data-askslot]");
     slot.innerHTML = askBox(slot.dataset.askslot, slot.dataset.choice);
     slot.querySelector("input").focus();
+  }
+});
+
+// Recalcule la correction affichée après un changement de bonne réponse.
+function refreshFeedback() {
+  if (!quiz) return;
+  for (const it of quiz.session.items) {
+    const fb = quiz.feedback[it.q], q = S.qById.get(it.q);
+    if (!fb || !q) continue;
+    const right = it.o.indexOf(q.answer), ok = quiz.answers[it.q] === right;
+    if (ok && !fb.ok) { const st = S.stats[it.q]; if (st && st[1] > 0) { st[1]--; dirtyShards.add(shardOf(it.q)); flushStats(); } }
+    quiz.feedback[it.q] = { ok, right };
+  }
+  saveCur();
+  renderQuestion();
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-dispute]");
+  if (!b) return;
+  const q = S.qById.get(b.dataset.dispute);
+  if (!q || !SAMPLE) return;
+  const before = q.answer;
+  b.disabled = true;
+  b.textContent = "Claude refait la question avec son modèle le plus puissant…";
+  const r = await verifyAnswers([q]).catch(() => null);
+  if (!r) { b.disabled = false; b.textContent = "Vérification impossible pour le moment. Réessaie."; return; }
+  if (q.answer !== before) {
+    toast(`Tu avais raison : la bonne réponse est « ${q.choices[q.answer]} ». C'est corrigé.`);
+    if ($("#view-quiz").classList.contains("active")) refreshFeedback();
+    else if ($("#view-result").classList.contains("active") && lastResult) renderResult(lastResult, true);
+    else if ($("#view-bank").classList.contains("active")) renderBank(true);
+  } else {
+    b.textContent = q.disputed ? "Claude a un doute : question marquée « réponse discutable »." : "Claude a refait la question : la correction est confirmée. Pose ta question ci-dessous si tu ne comprends pas.";
   }
 });
 
@@ -2028,7 +2067,44 @@ async function fixLanguage(qs, onStatus) {
   reindex();
   return fixed;
 }
-let langChecked = false;
+let langChecked = false, keyChecked = false;
+/** L'explication désigne-t-elle la même proposition que la réponse enregistrée ? Sinon on corrige la lettre. */
+async function checkAnswerKeys(qs, onStatus) {
+  let fixed = 0;
+  for (let i = 0; i < qs.length; i += 12) {
+    const part = qs.slice(i, i + 12);
+    onStatus?.(`Vérification des corrigés : ${Math.min(i + 12, qs.length)} sur ${qs.length}`);
+    let r;
+    try {
+      r = await SAMPLE.json([
+        "Pour chacun de ces QCM, lis l'explication (refais le calcul s'il y en a un) et indique l'indice (à partir de 0) de la proposition que l'explication démontre être la bonne. Ignore les mentions de position (« first choice »…), regarde le contenu.",
+        "Si l'explication ne permet pas de trancher, mets null.",
+        'Réponds uniquement avec un objet JSON : {"items":[{"n":0,"supported":2}]}',
+        "",
+        part.map((q, n) => `Question ${n} : ${q.question}\n${q.choices.map((c, j) => `  ${j}) ${c}`).join("\n")}\n  Explication : ${q.explanation}`).join("\n\n"),
+      ].join("\n"), { cache: false });
+    } catch (e) {
+      if (FATAL.has(e?.code)) break;
+      continue;
+    }
+    const byN = new Map((Array.isArray(r?.items) ? r.items : []).map((it) => [Number(it.n), it.supported]));
+    part.forEach((q, n) => {
+      const sup = byN.has(n) ? byN.get(n) : undefined;
+      for (const o of new Set([q, S.batches.get(q.batchId)?.questions.find((x) => x.id === q.id)])) {
+        if (!o) continue;
+        if (sup !== null && sup !== undefined && Number(sup) >= 0 && Number(sup) < o.choices.length && Number(sup) !== o.answer) { o.answer = Number(sup); o.keyFixed = true; }
+        if (sup !== undefined) o.keyChecked = true;
+      }
+      if (q.keyFixed && q.answer === Number(sup)) fixed++;
+    });
+    for (const bid of new Set(part.map((q) => q.batchId))) {
+      const b = S.batches.get(bid);
+      if (b) await write(col("qbatches").doc(bid), "set", { sourceId: b.sourceId, createdAt: b.createdAt, questions: b.questions.map(({ batchId, sourceId, ...rest }) => rest) }).catch(() => {});
+    }
+  }
+  reindex();
+  return fixed;
+}
 function startBgFill() {
   if (bgRunning || bgPaused || !SAMPLE || !ROOT) return;
   bgRunning = true;
@@ -2040,6 +2116,15 @@ function startBgFill() {
         $("#bg-pill").classList.remove("hidden");
         const n = await fixLanguage(wrong, (m) => ($("#bg-text").textContent = m));
         if (n) { toast(`${n} questions passées en anglais. Le bouton « Français » garde leur version française.`); if (quiz && $("#view-quiz").classList.contains("active")) renderQuestion(); }
+      }
+    }
+    if (!keyChecked) {
+      keyChecked = true;
+      const todo = S.questions.filter((q) => q.origin === "ia" && !q.keyChecked && q.explanation);
+      if (todo.length) {
+        $("#bg-pill").classList.remove("hidden");
+        const n = await checkAnswerKeys(todo, (m) => ($("#bg-text").textContent = m));
+        if (n) { toast(`${n} corrigé${n > 1 ? "s" : ""} rectifié${n > 1 ? "s" : ""} : la lettre ne correspondait pas à l'explication.`); if (quiz && $("#view-quiz").classList.contains("active")) refreshFeedback(); }
       }
     }
     let fails = 0;
@@ -2641,7 +2726,7 @@ function renderQuestion() {
     if (fb) {
       box.className = "feedback " + (fb.ok ? "good" : "bad");
       box.innerHTML = `<strong>${fb.ok ? cheer() : `Pas tout à fait : la bonne réponse était ${LETTERS[fb.right]}`}</strong>${v.explanation ? `<span>${esc(v.explanation)}</span>` : ""}${q.disputed ? '<small>Question ambiguë : deux vérifications de Claude n\'ont pas donné la même réponse. En cas de doute, pose ta question ci-dessous.</small>' : ""}`;
-      box.insertAdjacentHTML("beforeend", refHTML(q));
+      box.insertAdjacentHTML("beforeend", refHTML(q) + (SAMPLE ? `<div><button type="button" class="link" data-dispute="${q.id}">La correction est fausse ?</button></div>` : ""));
       $("#q-ask").innerHTML = askBox(q.id, it.o[chosen]);
       $("#q-ask").classList.remove("hidden");
     } else { box.className = "feedback hidden"; $("#q-ask").classList.add("hidden"); }
@@ -2753,7 +2838,7 @@ function renderResult(a, keepScroll = false) {
         <p><strong>${esc(shown(d.q).question)}</strong>${trLink(d.q)}</p>
         <ul class="opts">${d.it.o.map((orig, j) => `<li class="${j === d.right ? "right" : j === d.it.a ? "wrong" : ""}"><b>${LETTERS[j]}</b><span>${esc(shown(d.q).choices[orig])}</span></li>`).join("")}</ul>
         ${shown(d.q).explanation ? `<p class="expl">${esc(shown(d.q).explanation)}</p>` : ""}
-        ${refHTML(d.q)}
+        ${refHTML(d.q)}${SAMPLE ? `<div><button type="button" class="link" data-dispute="${d.q.id}">La correction est fausse ?</button></div>` : ""}
         <div data-askslot="${d.q.id}" data-choice="${d.it.a === null ? "" : d.it.o[d.it.a]}"><button type="button" class="chip" data-openask>Je ne comprends pas : poser une question</button></div>
       </div>`).join("")}</div>`;
   setView("result");
